@@ -1,0 +1,2009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Cards — 身份抽卡</title>
+<style>
+/* ========== DESIGN SYSTEM ========== */
+:root {
+  --bg-deep: #0a0a0f;
+  --bg-surface: #131320;
+  --bg-card: #1a1a2e;
+  --bg-card-hover: #20203a;
+  --gold: #d4a853;
+  --gold-light: #e8c878;
+  --gold-dim: #8a6d3b;
+  --text-primary: #f0eee8;
+  --text-secondary: #b8b4ac;
+  --text-muted: #6a6870;
+  --accent-red: #c4453a;
+  --accent-blue: #4a7fb5;
+  --accent-purple: #7a5aaa;
+  --accent-green: #5a9a6a;
+  --border-subtle: rgba(212,168,83,0.15);
+  --border-gold: rgba(212,168,83,0.4);
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-glow: 0 0 40px rgba(212,168,83,0.15);
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --font-display: 'Georgia', 'Noto Serif SC', serif;
+  --font-body: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'Courier New', monospace;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========== BACKGROUND ========== */
+.bg-atmosphere { position: fixed; top:0; left:0; right:0; bottom:0; z-index:0; overflow:hidden; }
+.bg-atmosphere::before {
+  content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%;
+  background: radial-gradient(ellipse at 30% 20%, rgba(212,168,83,0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 80%, rgba(120,90,170,0.04) 0%, transparent 50%);
+  animation: atmosphereShift 30s ease-in-out infinite alternate;
+}
+@keyframes atmosphereShift { 0%{transform:translate(0,0)} 100%{transform:translate(20px,-10px)} }
+
+.star { position:fixed; width:2px; height:2px; background:var(--gold-dim); border-radius:50%; opacity:0; animation:starTwinkle 4s ease-in-out infinite; }
+@keyframes starTwinkle { 0%,100%{opacity:0} 50%{opacity:0.6} }
+
+/* ========== SCREENS ========== */
+.screen { position:fixed; top:0; left:0; right:0; bottom:0; z-index:10; display:flex; transition:opacity 0.6s ease, transform 0.6s ease; overflow-y:auto; padding:20px; }
+.screen > * { margin:auto; }
+.screen.hidden { opacity:0; transform:scale(0.97); pointer-events:none; }
+.screen.active { opacity:1; transform:scale(1); pointer-events:auto; }
+
+/* ========== LOGIN SCREEN ========== */
+.login-content { text-align:center; max-width:480px; width:100%; }
+.login-icon { width:72px; height:72px; margin:0 auto 32px; animation:floatIcon 6s ease-in-out infinite; }
+.login-icon svg { width:100%; height:100%; }
+@keyframes floatIcon { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+
+.login-title { font-family:var(--font-display); font-size:2.8rem; font-weight:700; color:var(--gold-light); letter-spacing:0.02em; line-height:1.2; margin-bottom:8px; animation:titleReveal 1.2s ease-out 0.2s both; }
+.login-subtitle { font-family:var(--font-display); font-size:1.15rem; color:var(--text-secondary); letter-spacing:0.03em; margin-bottom:48px; line-height:1.6; animation:subtitleReveal 1.2s ease-out 0.6s both; }
+@keyframes titleReveal { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes subtitleReveal { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+.login-form { display:flex; flex-direction:column; gap:16px; animation:subtitleReveal 1.2s ease-out 1s both; }
+.login-input {
+  width:100%; background:rgba(212,168,83,0.06); border:1.5px solid var(--border-gold); border-radius:var(--radius-md);
+  padding:16px 20px; font-family:var(--font-body); font-size:1.05rem; color:var(--text-primary); outline:none;
+  transition:border-color 0.25s ease, box-shadow 0.25s ease; text-align:center;
+}
+.login-input:focus { border-color:var(--gold); box-shadow:0 0 12px rgba(212,168,83,0.15); }
+.login-input::placeholder { color:var(--text-muted); }
+
+.login-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  font-family:var(--font-display); font-size:1.1rem; font-weight:600; color:var(--bg-deep);
+  background:linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
+  padding:16px 48px; border:none; border-radius:var(--radius-md); cursor:pointer;
+  transition:all 0.3s ease; box-shadow:0 4px 20px rgba(212,168,83,0.3);
+}
+.login-btn:hover { transform:translateY(-2px) scale(1.02); box-shadow:0 6px 24px rgba(212,168,83,0.4); }
+.login-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+.admin-toggle { margin-top:20px; font-size:0.85rem; color:var(--text-muted); cursor:pointer; transition:color 0.2s; }
+.admin-toggle:hover { color:var(--gold); }
+.admin-code-row { display:none; gap:8px; align-items:center; }
+.admin-code-row.show { display:flex; }
+.admin-code-row .login-input { flex:1; font-size:0.9rem; padding:12px 16px; }
+.admin-label { font-size:0.75rem; color:var(--gold-dim); white-space:nowrap; font-family:var(--font-mono); }
+
+.login-hint { font-size:0.8rem; color:var(--text-muted); margin-top:24px; animation:subtitleReveal 1.2s ease-out 1.4s both; }
+
+/* ========== INIT SCREEN ========== */
+.init-content { text-align:center; max-width:500px; }
+.init-title { font-family:var(--font-display); font-size:1.6rem; color:var(--gold-light); margin-bottom:16px; }
+.init-desc { font-size:0.95rem; color:var(--text-secondary); line-height:1.7; margin-bottom:40px; }
+.init-link-box { background:rgba(212,168,83,0.06); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:12px 16px; margin:24px 0; font-family:var(--font-mono); font-size:0.75rem; color:var(--gold-dim); word-break:break-all; }
+.copy-btn { font-family:var(--font-body); font-size:0.85rem; color:var(--gold); background:transparent; border:1px solid var(--border-gold); padding:8px 20px; border-radius:var(--radius-sm); cursor:pointer; transition:all 0.2s; }
+.copy-btn:hover { background:rgba(212,168,83,0.1); }
+
+/* ========== NO ACCESS SCREEN ========== */
+.noaccess-content { text-align:center; max-width:400px; }
+.noaccess-title { font-family:var(--font-display); font-size:1.4rem; color:var(--gold-light); margin-bottom:12px; }
+.noaccess-desc { font-size:0.95rem; color:var(--text-secondary); line-height:1.6; margin-bottom:32px; }
+
+/* ========== MAIN SCREEN ========== */
+.main-header {
+  position:fixed; top:0; left:0; right:0; z-index:20;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 24px; background:rgba(10,10,15,0.92); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border-subtle);
+}
+.header-left { display:flex; align-items:center; gap:12px; }
+.header-logo { font-family:var(--font-display); font-size:1rem; color:var(--gold); letter-spacing:0.05em; }
+.header-user { font-size:0.85rem; color:var(--text-secondary); }
+.header-user .user-name { color:var(--gold-light); font-weight:600; }
+.header-right { display:flex; gap:8px; }
+.header-btn {
+  font-family:var(--font-body); font-size:0.8rem; color:var(--text-secondary);
+  background:transparent; border:1px solid var(--border-subtle); padding:8px 16px;
+  border-radius:var(--radius-sm); cursor:pointer; transition:all 0.2s;
+}
+.header-btn:hover { border-color:var(--border-gold); color:var(--gold); }
+.header-btn.admin-btn { border-color:rgba(196,69,58,0.4); color:#e06960; }
+.header-btn.admin-btn:hover { border-color:rgba(196,69,58,0.6); background:rgba(196,69,58,0.08); }
+
+.main-content { padding-top:72px; width:100%; max-width:1000px; margin:0 auto; }
+.main-title { font-family:var(--font-display); font-size:1.8rem; color:var(--gold-light); text-align:center; margin:48px 0 10px; letter-spacing:0.05em; }
+.main-subtitle { font-size:1rem; color:var(--text-secondary); text-align:center; margin-bottom:48px; }
+
+/* ========== FACE-DOWN CARD ROW (flat layout — all 5 always visible) ========== */
+.fan-container {
+  display:flex; justify-content:center; align-items:center;
+  gap:24px; flex-wrap:wrap; max-width:1000px; margin:0 auto 28px;
+  padding:40px 16px; min-height:300px;
+}
+.fan-card {
+  position:relative; width:172px; height:252px;
+  transform:rotate(var(--rot,0deg));
+  background:linear-gradient(160deg, #151525 0%, #1c1c30 40%, #121220 100%);
+  border:2px solid rgba(212,168,83,0.25);
+  border-radius:14px;
+  cursor:pointer;
+  touch-action:manipulation;
+  transition:all 0.4s cubic-bezier(0.4,0,0.2,1);
+  overflow:hidden;
+  box-shadow:0 6px 24px rgba(0,0,0,0.5);
+}
+.fan-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; bottom:0;
+  background:radial-gradient(circle at 50% 35%, rgba(212,168,83,0.08) 0%, transparent 55%);
+  pointer-events:none;
+}
+.fan-card::after {
+  content:''; position:absolute; top:12px; left:12px; right:12px; bottom:12px;
+  border:1px solid rgba(212,168,83,0.12);
+  border-radius:8px;
+  pointer-events:none;
+}
+.fan-card:nth-child(1) { --rot:-14deg; z-index:1; }
+.fan-card:nth-child(2) { --rot:-7deg;  z-index:2; }
+.fan-card:nth-child(3) { --rot:0deg;   z-index:3; }
+.fan-card:nth-child(4) { --rot:7deg;   z-index:4; }
+.fan-card:nth-child(5) { --rot:14deg;  z-index:5; }
+.fan-card:hover {
+  transform:rotate(var(--rot,0deg)) translateY(-52px) scale(1.06);
+  z-index:10;
+  border-color:rgba(212,168,83,0.55);
+  box-shadow:0 16px 48px rgba(0,0,0,0.6), 0 0 32px rgba(212,168,83,0.15);
+}
+/* 点击发牌脉冲：即时反馈触摸，旋转角度保留避免覆盖定位 transform */
+.fan-card.dealing {
+  animation: dealPulse 0.42s cubic-bezier(0.34,1.2,0.64,1);
+  z-index:30;
+  pointer-events:none;
+}
+.fan-card.dealing-focus {
+  border-color:rgba(212,168,83,0.6);
+  box-shadow:0 0 0 2px var(--gold), var(--shadow-card), var(--shadow-glow);
+}
+@keyframes dealPulse {
+  0%   { transform:rotate(var(--rot,0deg)) scale(1); }
+  50%  { transform:rotate(var(--rot,0deg)) translateY(-16px) scale(1.05); }
+  100% { transform:rotate(var(--rot,0deg)) scale(1); }
+}
+.fan-card.card-spent {
+  opacity:0.25; cursor:not-allowed; pointer-events:none; filter:grayscale(0.7);
+}
+.fan-card.card-spent:hover { transform:rotate(var(--rot,0deg)); box-shadow:0 6px 24px rgba(0,0,0,0.5); }
+
+.card-back-ornament {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-55%);
+  text-align:center;
+}
+.card-back-ornament .ornament-icon {
+  width:56px; height:56px; margin:0 auto 12px;
+  opacity:0.5;
+}
+.card-back-ornament .ornament-icon svg { width:100%; height:100%; }
+.card-back-ornament .ornament-text {
+  font-family:var(--font-mono); font-size:0.6rem; letter-spacing:3px;
+  color:rgba(212,168,83,0.35); text-transform:uppercase;
+}
+.card-back-num {
+  position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+  font-family:var(--font-mono); font-size:0.65rem; font-weight:700;
+  color:rgba(212,168,83,0.4); letter-spacing:1px;
+}
+.card-back-seal {
+  position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
+  width:30px; height:1.5px;
+  background:linear-gradient(90deg, transparent, rgba(212,168,83,0.3), transparent);
+}
+
+.draw-hint {
+  text-align:center; font-family:var(--font-display); font-size:1.1rem;
+  color:var(--gold); margin-bottom:20px; letter-spacing:0.03em;
+}
+
+/* Remaining count bar */
+.remaining-bar {
+  display:flex; justify-content:center; gap:16px; flex-wrap:wrap;
+  margin-bottom:32px; padding:16px 24px;
+  background:rgba(212,168,83,0.04); border:1px solid rgba(212,168,83,0.1);
+  border-radius:12px;
+}
+.remaining-item {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  min-width:64px;
+}
+.remaining-item .r-label { font-family:var(--font-mono); font-size:0.6rem; color:var(--text-muted); letter-spacing:1px; }
+.remaining-item .r-count { font-family:var(--font-display); font-size:1.1rem; font-weight:700; color:var(--gold-light); }
+.remaining-item .r-bar { width:48px; height:4px; border-radius:2px; background:rgba(212,168,83,0.12); overflow:hidden; }
+.remaining-item .r-bar-fill { height:100%; border-radius:2px; background:var(--gold); transition:width 0.5s ease; }
+.remaining-item.r-spent .r-count { color:var(--text-muted); }
+.remaining-item.r-spent .r-bar-fill { background:var(--text-muted); }
+
+.all-drawn-msg { text-align:center; margin:20px 0; font-family:var(--font-display); font-size:1.1rem; color:var(--gold-light); }
+.all-drawn-msg.hidden { display:none; }
+
+.progress-pill {
+  display:inline-block; padding:8px 20px; border-radius:999px;
+  background:rgba(212,168,83,0.1); border:1px solid rgba(212,168,83,0.3);
+  font-family:var(--font-display); font-size:0.95rem; color:var(--gold-light); letter-spacing:0.5px;
+}
+
+/* 管理员：按首次抽取分组 */
+.admin-grouping { margin:8px 0 24px; }
+.group-row { margin-bottom:14px; padding:14px 16px; background:rgba(212,168,83,0.04); border:1px solid rgba(212,168,83,0.1); border-radius:10px; }
+.group-head { display:flex; align-items:center; justify-content:space-between; border-left:4px solid var(--gold); padding-left:12px; margin-bottom:10px; }
+.group-name { font-family:var(--font-display); font-size:1.05rem; font-weight:700; color:var(--text-primary); }
+.group-count { font-family:var(--font-mono); font-size:0.8rem; color:var(--gold-light); }
+.group-members { display:flex; flex-wrap:wrap; gap:8px; }
+.member-chip { display:inline-block; padding:4px 12px; border-radius:999px; background:rgba(255,255,255,0.05); border:1px solid rgba(212,168,83,0.2); font-size:0.82rem; color:var(--text-secondary); }
+.group-empty { font-size:0.82rem; color:var(--text-muted); }
+
+/* ========== REVEAL SCREEN ========== */
+.reveal-content { text-align:center; max-width:600px; width:100%; position:relative; }
+
+.identity-banner {
+  border-radius:var(--radius-lg); padding:20px 24px; margin-bottom:24px;
+  border:2px solid; text-align:center;
+}
+.identity-banner[data-color="red"] { border-color:rgba(196,69,58,0.4); background:rgba(196,69,58,0.08); }
+.identity-banner[data-color="blue"] { border-color:rgba(74,127,181,0.4); background:rgba(74,127,181,0.08); }
+.identity-banner[data-color="purple"] { border-color:rgba(122,90,170,0.4); background:rgba(122,90,170,0.08); }
+.identity-banner[data-color="gold"] { border-color:rgba(212,168,83,0.4); background:rgba(212,168,83,0.08); }
+.identity-banner[data-color="green"] { border-color:rgba(90,154,106,0.4); background:rgba(90,154,106,0.08); }
+
+.identity-banner-label { font-family:var(--font-mono); font-size:0.7rem; letter-spacing:2px; color:var(--gold-dim); margin-bottom:6px; }
+.identity-banner-name { font-family:var(--font-display); font-size:1.8rem; font-weight:700; margin-bottom:4px; }
+.identity-banner-name[data-color="red"] { color:#e06960; }
+.identity-banner-name[data-color="blue"] { color:#7ab5d8; }
+.identity-banner-name[data-color="purple"] { color:#a08ada; }
+.identity-banner-name[data-color="gold"] { color:var(--gold-light); }
+.identity-banner-name[data-color="green"] { color:#8ac8a0; }
+.identity-banner-desc { font-size:0.85rem; color:var(--text-secondary); line-height:1.5; }
+
+.reveal-front-card {
+  width:100%; max-width:480px; margin:0 auto 24px; background:var(--bg-card);
+  border:2px solid var(--border-gold); border-radius:var(--radius-lg); padding:36px 28px;
+  box-shadow:var(--shadow-card), var(--shadow-glow); transition:opacity 0.5s ease, transform 0.5s ease; position:relative;
+}
+.reveal-front-card.hidden-card { opacity:0; transform:translateY(-20px) scale(0.92); pointer-events:none; position:absolute; top:0; left:0; right:0; }
+.reveal-front-card[data-case="0"] { border-color:rgba(196,69,58,0.4); }
+.reveal-front-card[data-case="1"] { border-color:rgba(74,127,181,0.4); }
+.reveal-front-card[data-case="2"] { border-color:rgba(122,90,170,0.4); }
+.reveal-front-card[data-case="3"] { border-color:rgba(212,168,83,0.4); }
+.reveal-front-card[data-case="4"] { border-color:rgba(90,154,106,0.4); }
+
+.case-organization { font-family:var(--font-display); font-size:2.2rem; font-weight:700; color:var(--gold-light); margin-bottom:10px; }
+.case-question { font-family:var(--font-display); font-size:1.2rem; color:var(--text-secondary); line-height:1.5; }
+
+.reveal-back-panel {
+  width:100%; max-width:500px; margin:0 auto; background:var(--bg-surface);
+  border:2px solid var(--border-gold); border-radius:var(--radius-lg); padding:32px 28px;
+  box-shadow:var(--shadow-card), var(--shadow-glow); transition:opacity 0.5s ease, transform 0.5s ease;
+}
+.reveal-back-panel.hidden-card { opacity:0; transform:translateY(20px); pointer-events:none; position:absolute; top:0; left:0; right:0; }
+.reveal-back-panel.visible-card { opacity:1; transform:translateY(0); pointer-events:auto; position:relative; }
+.reveal-back-panel[data-case="0"] { border-color:rgba(196,69,58,0.4); }
+.reveal-back-panel[data-case="1"] { border-color:rgba(74,127,181,0.4); }
+.reveal-back-panel[data-case="2"] { border-color:rgba(122,90,170,0.4); }
+.reveal-back-panel[data-case="3"] { border-color:rgba(212,168,83,0.4); }
+.reveal-back-panel[data-case="4"] { border-color:rgba(90,154,106,0.4); }
+
+.back-panel-header { text-align:center; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid var(--border-subtle); }
+.back-panel-org { font-family:var(--font-display); font-size:1.5rem; font-weight:700; margin-bottom:4px; }
+.back-panel-org[data-color="red"] { color:#e06960; }
+.back-panel-org[data-color="blue"] { color:#7ab5d8; }
+.back-panel-org[data-color="purple"] { color:#a08ada; }
+.back-panel-org[data-color="gold"] { color:var(--gold-light); }
+.back-panel-org[data-color="green"] { color:#8ac8a0; }
+.back-panel-question { font-family:var(--font-display); font-size:1rem; color:var(--text-secondary); }
+
+.scenario-text { font-size:0.92rem; color:var(--text-secondary); line-height:1.7; margin-bottom:20px; text-align:left; }
+.scenario-text .highlight { color:var(--gold); font-weight:600; }
+
+.options-list { display:flex; flex-direction:column; gap:10px; width:100%; }
+.option-item {
+  display:flex; align-items:flex-start; gap:10px; padding:12px 16px;
+  background:rgba(212,168,83,0.06); border:1px solid var(--border-subtle); border-radius:var(--radius-sm);
+  cursor:pointer; transition:all 0.25s ease; text-align:left;
+}
+.option-item:hover { background:rgba(212,168,83,0.12); border-color:var(--border-gold); transform:translateX(4px); }
+.option-item.chosen { background:rgba(212,168,83,0.15); border-color:var(--gold); box-shadow:0 0 12px rgba(212,168,83,0.1); }
+[data-case="0"] .option-item:hover { border-color:rgba(196,69,58,0.5); background:rgba(196,69,58,0.08); }
+[data-case="0"] .option-item.chosen { border-color:rgba(196,69,58,0.6); background:rgba(196,69,58,0.12); }
+[data-case="1"] .option-item:hover { border-color:rgba(74,127,181,0.5); background:rgba(74,127,181,0.08); }
+[data-case="1"] .option-item.chosen { border-color:rgba(74,127,181,0.6); background:rgba(74,127,181,0.12); }
+[data-case="2"] .option-item:hover { border-color:rgba(122,90,170,0.5); background:rgba(122,90,170,0.08); }
+[data-case="2"] .option-item.chosen { border-color:rgba(122,90,170,0.6); background:rgba(122,90,170,0.12); }
+[data-case="3"] .option-item:hover { border-color:rgba(212,168,83,0.5); }
+[data-case="4"] .option-item:hover { border-color:rgba(90,154,106,0.5); background:rgba(90,154,106,0.08); }
+[data-case="4"] .option-item.chosen { border-color:rgba(90,154,106,0.6); background:rgba(90,154,106,0.12); }
+
+.option-letter { font-family:var(--font-display); font-size:1rem; font-weight:700; color:var(--gold); min-width:24px; }
+.option-text { font-size:0.88rem; color:var(--text-primary); line-height:1.5; }
+
+.why-section { animation:whyReveal 0.5s ease-out both; margin-top:16px; }
+.why-section.hidden { display:none; }
+@keyframes whyReveal { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.why-prompt { font-family:var(--font-display); font-size:0.95rem; color:var(--gold); margin-bottom:10px; }
+.why-input {
+  width:100%; background:rgba(212,168,83,0.06); border:1px solid var(--border-subtle); border-radius:var(--radius-sm);
+  padding:12px 16px; font-family:var(--font-body); font-size:0.88rem; color:var(--text-primary); resize:vertical; min-height:70px; outline:none;
+  transition:border-color 0.25s ease;
+}
+.why-input:focus { border-color:var(--border-gold); }
+.why-input::placeholder { color:var(--text-muted); }
+
+.action-row { display:flex; gap:16px; justify-content:center; margin-top:28px; }
+.action-row.hidden { display:none; }
+
+.btn-primary {
+  font-family:var(--font-display); font-size:0.95rem; font-weight:600; color:var(--bg-deep);
+  background:linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%); border:none;
+  padding:14px 36px; border-radius:var(--radius-md); cursor:pointer; transition:all 0.25s ease;
+  box-shadow:0 2px 12px rgba(212,168,83,0.2);
+}
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 4px 20px rgba(212,168,83,0.3); }
+.btn-primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+.btn-secondary {
+  font-family:var(--font-display); font-size:0.95rem; font-weight:500; color:var(--text-secondary);
+  background:transparent; border:1px solid var(--border-gold); padding:14px 36px; border-radius:var(--radius-md);
+  cursor:pointer; transition:all 0.25s ease;
+}
+.btn-secondary:hover { border-color:var(--gold); color:var(--gold); transform:translateY(-2px); background:rgba(212,168,83,0.06); }
+
+.flip-btn {
+  font-family:var(--font-display); font-size:0.9rem; color:var(--gold); background:transparent;
+  border:1.5px solid var(--border-gold); padding:12px 28px; border-radius:var(--radius-sm); cursor:pointer;
+  transition:all 0.25s ease; margin-top:16px;
+}
+.flip-btn:hover { background:rgba(212,168,83,0.1); transform:translateY(-2px); }
+
+/* ========== REFLECTION SCREEN ========== */
+.reflection-content { text-align:center; max-width:560px; width:100%; }
+.reflection-identity-banner { margin-bottom:24px; }
+.reflection-title { font-family:var(--font-display); font-size:1.6rem; color:var(--gold-light); margin-bottom:4px; }
+.reflection-question { font-family:var(--font-display); font-size:1.05rem; color:var(--gold); margin-bottom:16px; font-style:italic; }
+.reflection-choice { font-family:var(--font-display); font-size:1rem; color:var(--text-secondary); margin-bottom:8px; }
+.reflection-reason { font-size:0.88rem; color:var(--text-secondary); line-height:1.6; margin-bottom:24px; }
+.reflection-reason.hidden { display:none; }
+.reflection-quote { font-family:var(--font-display); font-size:1.05rem; color:var(--text-secondary); line-height:1.7; margin-bottom:20px; padding:18px 0; border-top:1px solid var(--border-subtle); border-bottom:1px solid var(--border-subtle); }
+.reflection-summary { font-size:0.85rem; color:var(--text-muted); line-height:1.6; margin-bottom:36px; }
+.result-locked-note { font-size:0.82rem; color:var(--gold-light); letter-spacing:0.5px; margin:6px 0 22px; padding:10px 14px; border:1px solid var(--border-gold); border-radius:8px; background:rgba(212,168,83,0.06); }
+
+/* ========== HISTORY SCREEN ========== */
+.history-content { max-width:640px; width:100%; }
+.screen-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+.screen-title { font-family:var(--font-display); font-size:1.5rem; color:var(--gold-light); }
+.back-btn {
+  font-family:var(--font-body); font-size:0.85rem; color:var(--gold); background:transparent;
+  border:1.5px solid var(--border-gold); padding:8px 20px; border-radius:var(--radius-sm); cursor:pointer;
+  transition:all 0.2s; display:inline-flex; align-items:center; gap:6px;
+}
+.back-btn:hover { background:rgba(212,168,83,0.1); transform:translateX(-3px); }
+
+.history-list { display:flex; flex-direction:column; gap:14px; }
+.history-item {
+  background:var(--bg-card); border:1px solid var(--border-subtle); border-left:3px solid; border-radius:var(--radius-sm);
+  padding:16px 20px; display:flex; flex-direction:column; gap:6px;
+}
+.history-item[data-color="red"] { border-left-color:#e06960; }
+.history-item[data-color="blue"] { border-left-color:#7ab5d8; }
+.history-item[data-color="purple"] { border-left-color:#a08ada; }
+.history-item[data-color="gold"] { border-left-color:var(--gold-light); }
+.history-item[data-color="green"] { border-left-color:#8ac8a0; }
+
+.history-item-header { display:flex; justify-content:space-between; align-items:center; }
+.history-identity { font-family:var(--font-display); font-size:1rem; font-weight:700; }
+.history-identity[data-color="red"] { color:#e06960; }
+.history-identity[data-color="blue"] { color:#7ab5d8; }
+.history-identity[data-color="purple"] { color:#a08ada; }
+.history-identity[data-color="gold"] { color:var(--gold-light); }
+.history-identity[data-color="green"] { color:#8ac8a0; }
+.history-time { font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); }
+.history-org { font-size:0.82rem; color:var(--text-secondary); }
+.history-choice { font-size:0.82rem; color:var(--gold); }
+.history-reason { font-size:0.8rem; color:var(--text-muted); font-style:italic; }
+
+.empty-msg { text-align:center; padding:40px 20px; color:var(--text-muted); font-size:0.9rem; }
+
+/* ========== ADMIN SCREEN ========== */
+.admin-content { max-width:800px; width:100%; }
+.admin-stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:28px; }
+.stat-box { background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:16px; text-align:center; }
+.stat-num { font-family:var(--font-display); font-size:1.8rem; color:var(--gold-light); }
+.stat-label { font-size:0.75rem; color:var(--text-muted); margin-top:4px; }
+
+.admin-card-stats { margin-bottom:28px; }
+.card-stat-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.card-stat-name { width:120px; font-size:0.82rem; font-weight:600; flex-shrink:0; }
+.card-stat-bar { flex:1; height:20px; background:rgba(212,168,83,0.06); border-radius:var(--radius-sm); overflow:hidden; position:relative; }
+.card-stat-fill { height:100%; border-radius:var(--radius-sm); transition:width 0.5s ease; }
+.card-stat-fill[data-color="red"] { background:linear-gradient(90deg, rgba(196,69,58,0.3), rgba(196,69,58,0.6)); }
+.card-stat-fill[data-color="blue"] { background:linear-gradient(90deg, rgba(74,127,181,0.3), rgba(74,127,181,0.6)); }
+.card-stat-fill[data-color="purple"] { background:linear-gradient(90deg, rgba(122,90,170,0.3), rgba(122,90,170,0.6)); }
+.card-stat-fill[data-color="gold"] { background:linear-gradient(90deg, rgba(212,168,83,0.3), rgba(212,168,83,0.6)); }
+.card-stat-fill[data-color="green"] { background:linear-gradient(90deg, rgba(90,154,106,0.3), rgba(90,154,106,0.6)); }
+.card-stat-num { width:50px; font-size:0.78rem; color:var(--text-secondary); text-align:right; flex-shrink:0; font-family:var(--font-mono); }
+
+.admin-table-wrap { overflow-x:auto; border:1px solid var(--border-subtle); border-radius:var(--radius-sm); margin-bottom:20px; }
+.admin-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+.admin-table th { background:rgba(212,168,83,0.08); color:var(--gold); padding:10px 12px; text-align:left; font-weight:600; white-space:nowrap; border-bottom:1px solid var(--border-subtle); }
+.admin-table td { padding:8px 12px; color:var(--text-secondary); border-bottom:1px solid rgba(212,168,83,0.05); }
+.admin-table tr:hover td { background:rgba(212,168,83,0.04); }
+.admin-table .col-identity { font-weight:600; }
+
+.export-btn { font-family:var(--font-body); font-size:0.85rem; color:var(--gold); background:transparent; border:1.5px solid var(--border-gold); padding:10px 24px; border-radius:var(--radius-sm); cursor:pointer; transition:all 0.2s; }
+.export-btn:hover { background:rgba(212,168,83,0.1); transform:translateY(-2px); }
+.datalink-box { margin:12px 0; padding:12px 16px; background:rgba(192,69,60,0.06); border:1px solid var(--border-subtle); border-radius:8px; }
+.datalink-title { font-size:0.8rem; color:var(--gold); margin-bottom:8px; font-family:var(--font-body); line-height:1.5; }
+.datalink-row { display:flex; gap:8px; align-items:center; }
+.datalink-input { flex:1; min-width:0; font-family:var(--font-mono); font-size:0.72rem; color:var(--text-secondary); background:var(--bg-deep); border:1px solid var(--border-subtle); border-radius:6px; padding:8px 10px; }
+.datalink-copy { font-family:var(--font-body); font-size:0.8rem; color:var(--bg-deep); background:var(--gold); border:none; border-radius:6px; padding:8px 16px; cursor:pointer; white-space:nowrap; }
+.datalink-copy:hover { background:var(--gold-light); }
+.reset-btn { color:var(--accent-red); border-color:rgba(163,31,52,0.5); }
+.reset-btn:hover { background:rgba(163,31,52,0.12); }
+
+.admin-section-title { font-family:var(--font-display); font-size:1.1rem; color:var(--gold); margin-bottom:12px; }
+
+/* ========== LOADING & TOAST ========== */
+.loading-overlay { position:fixed; top:0; left:0; right:0; bottom:0; z-index:100; background:rgba(10,10,15,0.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; }
+.loading-overlay.hidden { display:none; }
+.loading-spinner { width:40px; height:40px; border:3px solid var(--border-gold); border-top-color:var(--gold); border-radius:50%; animation:spin 0.8s linear infinite; }
+.loading-text { margin-top:16px; font-size:0.9rem; color:var(--gold); }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); z-index:200; background:var(--bg-card); border:1px solid var(--border-gold); border-radius:var(--radius-md); padding:12px 24px; font-size:0.88rem; color:var(--text-primary); box-shadow:0 4px 20px rgba(0,0,0,0.4); transition:opacity 0.3s ease, transform 0.3s ease; }
+.toast.hidden { opacity:0; transform:translateX(-50%) translateY(10px); pointer-events:none; }
+
+/* ========== FADE IN (opacity only — must NOT touch transform, or it overrides fan-card positioning) ========== */
+.fade-in { animation:fadeIn 0.6s ease-out both; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+/* ========== IDENTITY REVEAL ========== */
+.identity-reveal { animation:identityReveal 1.2s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes identityReveal {
+  0% { opacity:0; transform:scale(0.7) translateY(30px); filter:blur(10px); }
+  50% { opacity:1; transform:scale(1.1) translateY(0); filter:blur(2px); }
+  100% { opacity:1; transform:scale(1) translateY(0); filter:blur(0); }
+}
+.identity-reveal-glow { position:relative; }
+.identity-reveal-glow::after {
+  content:''; position:absolute; top:-4px; left:-4px; right:-4px; bottom:-4px;
+  border-radius:inherit; z-index:-1;
+  animation:revealGlow 1.5s ease-out both;
+}
+@keyframes revealGlow {
+  0% { box-shadow:0 0 0 0 rgba(212,168,83,0.5); opacity:1; }
+  100% { box-shadow:0 0 60px 20px rgba(212,168,83,0); opacity:0; }
+}
+.reveal-label-dramatic {
+  font-family:var(--font-mono); font-size:0.8rem; letter-spacing:3px;
+  color:var(--gold); margin-bottom:8px;
+  animation:labelPulse 2s ease-in-out infinite;
+}
+@keyframes labelPulse { 0%,100%{opacity:0.7} 50%{opacity:1} }
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .login-title { font-size:2.2rem; }
+  .login-subtitle { font-size:1rem; }
+  .main-header { padding:10px 16px; }
+  .header-logo { display:none; }
+  .header-btn { padding:6px 12px; font-size:0.72rem; }
+  .main-title { font-size:1.4rem; }
+  .main-subtitle { font-size:0.85rem; }
+  .fan-container { gap:18px; padding:32px 12px; max-width:100%; }
+  .fan-card { width:148px; height:216px; }
+  .fan-card:nth-child(1) { --rot:-13deg; z-index:1; }
+  .fan-card:nth-child(2) { --rot:-6deg;  z-index:2; }
+  .fan-card:nth-child(3) { --rot:0deg;   z-index:3; }
+  .fan-card:nth-child(4) { --rot:6deg;   z-index:4; }
+  .fan-card:nth-child(5) { --rot:13deg;  z-index:5; }
+  .fan-card:hover { transform:rotate(var(--rot,0deg)) translateY(-42px) scale(1.06); }
+  .case-organization { font-size:1.8rem; }
+  .reveal-front-card, .reveal-back-panel { padding:24px 20px; }
+  .admin-table { font-size:0.72rem; }
+  .admin-table th, .admin-table td { padding:6px 8px; }
+  .card-stat-name { width:90px; font-size:0.75rem; }
+  .remaining-bar { gap:10px; padding:12px 16px; }
+  .remaining-item { min-width:52px; }
+}
+
+@media (max-width: 480px) {
+  .login-title { font-size:1.8rem; }
+  .login-subtitle { font-size:0.9rem; }
+  .main-title { font-size:1.2rem; }
+  .fan-container { gap:10px; padding:28px 8px; max-width:100%; }
+  .fan-card { width:112px; height:166px; }
+  .fan-card:nth-child(1) { --rot:-10deg; z-index:1; }
+  .fan-card:nth-child(2) { --rot:-5deg;  z-index:2; }
+  .fan-card:nth-child(3) { --rot:0deg;   z-index:3; }
+  .fan-card:nth-child(4) { --rot:5deg;   z-index:4; }
+  .fan-card:nth-child(5) { --rot:10deg;  z-index:5; }
+  .fan-card:hover { transform:rotate(var(--rot,0deg)) translateY(-30px) scale(1.06); }
+  .card-back-ornament .ornament-icon { width:40px; height:40px; }
+  .case-organization { font-size:1.5rem; }
+  .case-question { font-size:1rem; }
+  .action-row { flex-direction:column; }
+  .btn-primary, .btn-secondary { width:100%; }
+  .admin-stats-grid { grid-template-columns:1fr 1fr; }
+  .remaining-bar { gap:8px; padding:10px 12px; }
+  .remaining-item { min-width:44px; }
+  .remaining-item .r-count { font-size:0.95rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-atmosphere"></div>
+<div id="starsContainer"></div>
+
+<!-- ========== LOGIN SCREEN ========== -->
+<div class="screen active" id="loginScreen">
+  <div class="login-content">
+    <div class="login-icon">
+      <svg viewBox="0 0 72 72" fill="none">
+        <circle cx="36" cy="36" r="32" stroke="#d4a853" stroke-width="1.5" opacity="0.5"/>
+        <path d="M36 10 L62 36 L36 62 L10 36 Z" stroke="#d4a853" stroke-width="1" fill="none" opacity="0.4"/>
+        <path d="M36 24 L39 33 L48 33 L41 38 L43 47 L36 42 L29 47 L31 38 L24 33 L33 33 Z" fill="#d4a853" opacity="0.7"/>
+        <line x1="36" y1="4" x2="36" y2="68" stroke="#d4a853" stroke-width="0.5" opacity="0.3"/>
+        <line x1="4" y1="36" x2="68" y2="36" stroke="#d4a853" stroke-width="0.5" opacity="0.3"/>
+      </svg>
+    </div>
+    <h1 class="login-title">Decision Cards</h1>
+    <p class="login-subtitle">Every great city starts with a difficult decision.</p>
+    <div class="login-form">
+      <input class="login-input" id="nameInput" type="text" inputmode="numeric" placeholder="输入你的学号" maxlength="12" onkeypress="if(event.key==='Enter')handleLogin()">
+      <div class="admin-code-row" id="adminCodeRow">
+        <span class="admin-label">ADMIN</span>
+        <input class="login-input" id="adminCodeInput" type="password" placeholder="管理员密码" maxlength="20" onkeypress="if(event.key==='Enter')handleLogin()">
+      </div>
+      <button class="login-btn" id="loginBtn" onclick="handleLogin()">进入</button>
+    </div>
+    <div class="admin-toggle" id="adminToggle" onclick="toggleAdminLogin()">管理员登录</div>
+    <p class="login-hint">5 张决策牌 · 20% 均等概率 · 每人仅抽一次 · 抽完即定身份</p>
+  </div>
+</div>
+
+<!-- ========== INIT SCREEN ========== -->
+<div class="screen hidden" id="initScreen">
+  <div class="init-content">
+    <h2 class="init-title">数据初始化</h2>
+    <p class="init-desc">欢迎，<span id="initUserName"></span>！您是管理员。<br>请点击下方按钮初始化抽卡数据，然后将页面链接分享给参与者。</p>
+    <button class="btn-primary" onclick="initializeData()">初始化数据</button>
+    <div id="initSuccessBox" style="display:none;">
+      <div class="init-link-box" id="initLinkBox"></div>
+      <button class="copy-btn" onclick="copyLink()">复制链接</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== NO ACCESS SCREEN ========== -->
+<div class="screen hidden" id="noAccessScreen">
+  <div class="noaccess-content">
+    <h2 class="noaccess-title">无法进入</h2>
+    <p class="noaccess-desc">请从管理员分享的链接进入。<br>如果链接已过期，请联系管理员重新初始化。</p>
+    <button class="btn-secondary" onclick="backToLogin()">返回登录</button>
+  </div>
+</div>
+
+<!-- ========== MAIN SCREEN ========== -->
+<div class="screen hidden" id="mainScreen">
+  <div class="main-header">
+    <div class="header-left">
+      <span class="header-logo">Decision Cards</span>
+      <span class="header-user">欢迎，<span class="user-name" id="headerUserName"></span></span>
+    </div>
+    <div class="header-right">
+      <button class="header-btn" onclick="showHistory()">我的记录</button>
+      <button class="header-btn admin-btn" id="adminBtn" style="display:none;" onclick="showAdmin()">管理后台</button>
+      <button class="header-btn" onclick="logout()">退出</button>
+    </div>
+  </div>
+  <div class="main-content">
+    <p class="main-title">Decision Cards</p>
+    <p class="main-subtitle">点击卡牌抽取你的决策问题 · 每人仅一次机会 · 抽完即确定身份</p>
+    <p class="draw-hint" id="drawHint">点击任意卡牌，抽取你的决策</p>
+    <div class="fan-container" id="cardGrid"></div>
+    <div class="remaining-bar" id="remainingBar"></div>
+    <div class="all-drawn-msg hidden" id="allDrawnMsg">所有卡牌名额已抽满，暂不可抽。<br><span style="font-size:0.85rem;color:var(--text-muted);">如你是管理员，可在后台「重置全部记录」后重新开放</span></div>
+  </div>
+</div>
+
+<!-- ========== REVEAL SCREEN ========== -->
+<div class="screen hidden" id="revealScreen">
+  <div class="reveal-content">
+    <div class="reveal-front-card" id="revealFrontCard" data-case="0" onclick="flipRevealCard()" style="cursor:pointer; touch-action:manipulation;">
+      <div class="case-organization" id="caseOrg">Google</div>
+      <div class="case-question" id="caseQuestion">创新还是利润？</div>
+    </div>
+    <div class="reveal-back-panel hidden-card" id="revealBackPanel" data-case="0">
+      <div class="back-panel-header">
+        <div class="back-panel-org" id="backOrg" data-color="red">Google</div>
+        <div class="back-panel-question" id="backQuestion">创新还是利润？</div>
+      </div>
+      <div class="scenario-text" id="scenarioText"></div>
+      <div class="options-list" id="optionsList"></div>
+      <div class="why-section hidden" id="whySection">
+        <p class="why-prompt">为什么？</p>
+        <textarea class="why-input" id="whyInput" placeholder="写下你的思考……"></textarea>
+      </div>
+    </div>
+    <div id="revealActions">
+      <button class="flip-btn" id="flipBtn" onclick="flipRevealCard()">翻开背面 →</button>
+    </div>
+    <div class="action-row hidden" id="actionRow">
+      <button class="btn-secondary" onclick="cancelDraw()">取消</button>
+      <button class="btn-primary" id="submitBtn" onclick="submitChoice()">完成选择</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== REFLECTION SCREEN ========== -->
+<div class="screen hidden" id="reflectionScreen">
+  <div class="reflection-content">
+    <div class="identity-banner reflection-identity-banner" id="reflectionBanner" data-color="red">
+      <div class="reveal-label-dramatic">身份揭晓 · IDENTITY REVEALED</div>
+      <div class="identity-banner-name" id="reflectionIdentityName" data-color="red">企业领导者</div>
+      <div class="identity-banner-desc" id="reflectionIdentityDesc"></div>
+    </div>
+    <h2 class="reflection-title" id="reflectionTitle">你的选择</h2>
+    <div class="reflection-question" id="reflectionQuestion"></div>
+    <div class="reflection-choice" id="reflectionChoice"></div>
+    <div class="reflection-reason hidden" id="reflectionReason"></div>
+    <p class="reflection-quote" id="reflectionQuote"></p>
+    <p class="reflection-summary" id="reflectionSummary"></p>
+    <div class="action-row">
+      <button class="btn-secondary" onclick="showHistory()">我的记录</button>
+      <button class="btn-primary" onclick="goHome()">完成 · 查看我的身份</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== RESULT SCREEN (single draw) ========== -->
+<div class="screen hidden" id="resultScreen">
+  <div class="reflection-content">
+    <div class="identity-banner reflection-identity-banner" id="resultBanner" data-color="red">
+      <div class="reveal-label-dramatic">身份已确定 · YOUR GROUP</div>
+      <div class="identity-banner-name" id="resultIdentityName" data-color="red"></div>
+      <div class="identity-banner-desc" id="resultIdentityDesc"></div>
+    </div>
+    <h2 class="reflection-title" id="resultTitle"></h2>
+    <div class="reflection-question" id="resultQuestion"></div>
+    <div class="reflection-choice" id="resultChoice"></div>
+    <div class="reflection-reason hidden" id="resultReason"></div>
+    <p class="reflection-quote" id="resultQuote"></p>
+    <p class="reflection-summary" id="resultSummary"></p>
+    <div class="result-locked-note">你已完成一次抽卡，身份已固定，不可再次抽取。</div>
+    <div class="action-row">
+      <button class="btn-secondary" onclick="showHistory()">我的记录</button>
+      <button class="btn-primary" onclick="logout()">返回登录</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== HISTORY SCREEN ========== -->
+<div class="screen hidden" id="historyScreen">
+  <div class="history-content">
+    <div class="screen-title-row">
+      <span class="screen-title">我的抽卡记录</span>
+      <button class="back-btn" onclick="goHome()">← 返回</button>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<!-- ========== ADMIN SCREEN ========== -->
+<div class="screen hidden" id="adminScreen">
+  <div class="admin-content">
+    <div class="screen-title-row">
+      <span class="screen-title">管理后台</span>
+      <button class="back-btn" onclick="showMain()">← 返回</button>
+    </div>
+    <div class="admin-stats-grid" id="adminStats"></div>
+    <div id="adminDebugBox" style="margin:12px 0;padding:12px 16px;background:rgba(212,168,83,0.06);border:1px solid var(--border-subtle);border-radius:8px;font-size:0.8rem;color:var(--text-secondary);"></div>
+    <div class="datalink-box">
+      <div class="datalink-title">数据链接（管理员用此链接可查看并导出全部记录，跨设备也能读到同一份数据）</div>
+      <div class="datalink-row"><input id="adminDataLinkInput" class="datalink-input" readonly><button class="datalink-copy" onclick="copyDataLink()">复制</button></div>
+    </div>
+    <h3 class="admin-section-title">卡牌统计</h3>
+    <div class="admin-card-stats" id="adminCardStats"></div>
+    <div class="admin-grouping" id="adminGrouping"></div>
+    <div class="screen-title-row">
+      <h3 class="admin-section-title">全部抽卡记录</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="export-btn" onclick="refreshAdminData()">🔄 刷新数据</button>
+        <button class="export-btn" onclick="exportCSV()">⬇ 导出 Excel (CSV)</button>
+        <button class="export-btn" onclick="exportData()">⬇ 导出 JSON</button>
+        <button class="export-btn reset-btn" onclick="resetAllDraws()">重置全部记录</button>
+      </div>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table" id="adminTable">
+        <thead><tr><th>#</th><th>时间</th><th>姓名</th><th>卡牌</th><th>身份</th><th>选择</th><th>理由</th></tr></thead>
+        <tbody id="adminTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Loading & Toast -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div style="text-align:center;">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loadingText">加载中...</div>
+  </div>
+</div>
+<div class="toast hidden" id="toast"></div>
+
+<script>
+// ========== CONSTANTS ========== //
+const ADMIN_CODE_HASH = '1e63b18249a8ca718cb1650cfea727de9fa9dbd34be456778a6c753c754921bb';
+// 管理员密码以 SHA-256 哈希存储，源码中只暴露哈希值，学生查看源代码也看不到明文密码
+function sha256(ascii) {
+  function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+  var mathPow = Math.pow;
+  var maxWord = mathPow(2, 32);
+  var result = '';
+  var words = [];
+  var asciiBitLength = ascii.length * 8;
+  var hash = sha256.h = sha256.h || [];
+  var k = sha256.k = sha256.k || [];
+  var primeCounter = k.length;
+  var isComposite = {};
+  for (var candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (var i = 0; i < 313; i += candidate) { isComposite[i] = candidate; }
+      hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  ascii += '\x80';
+  while (ascii.length % 64 - 56) ascii += '\x00';
+  for (i = 0; i < ascii.length; i++) {
+    var j = ascii.charCodeAt(i);
+    if (j >> 8) return;
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = ((asciiBitLength / maxWord) | 0);
+  words[words.length] = (asciiBitLength);
+  for (var w = 0; w < words.length;) {
+    var W = words.slice(w, w += 16);
+    var oldHash = hash;
+    hash = hash.slice(0, 8);
+    for (i = 0; i < 64; i++) {
+      var w15 = W[i - 15], w2 = W[i - 2];
+      var a = hash[0], e = hash[4];
+      var temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ (~e & hash[6])) + k[i] + (W[i] = (i < 16) ? W[i] : (W[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + W[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);
+      var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+    }
+    for (i = 0; i < 8; i++) { hash[i] = (hash[i] + oldHash[i]) | 0; }
+  }
+  for (i = 0; i < 8; i++) {
+    for (var b = 3; b + 1; b--) { var byte = (hash[i] >> (b * 8)) & 255; result += ((byte < 16) ? 0 : '') + byte.toString(16); }
+  }
+  return result;
+}
+const JSONBLOB_BASE = 'https://jsonblob.com/api/jsonBlob';
+// 所有设备共享的固定云端：即便打开「干净链接」（无 #blob=）也读写同一个 blob，管理员才能看到全部数据
+const DEFAULT_BLOB_ID = '019fb761-0ec4-7ce6-b5a2-eb8da711e050';
+const MAX_DRAWS = 8;
+const LS_BLOB = 'dc_blob_id';
+const LS_USER = 'dc_user_name';
+const LS_ADMIN = 'dc_is_admin';
+// 允许登录的学号白名单（仅名单内可抽卡；管理员用密码登录不受此限）
+const ALLOWED_STUDENT_IDS = ['124120935106','124120935616','124120935609','124120935144','125120915030','125120915028','125120935131','125120935085','125120935116','125120935130','125120935208','125120935226','125120935191','125120935259','125120935283','125120935243','125120935429','125120935395','125120935509','125120935467','125120935606','124120935604','124120935611','122120930611','121120930320','121120930724','124120935600','122120930326','123120935747','121120921222','123120935484','122120930594','121120930407','123120935746','125120935446','125120935439','125120935436','120120930734','1091209290','125120935504','12340','12341','12342','12343','12344','12348','12346','12347','12349'];
+
+// ========== CARD DATA ========== //
+const cards = [
+  {
+    caseNum: 'CASE 01',
+    organization: 'Google',
+    question: '创新还是利润？',
+    identity: '企业领导者',
+    identityEn: 'Enterprise Leader',
+    identityDesc: '你在创新与利润之间做出抉择，承担企业方向的责任',
+    accent: '#c4453a',
+    colorName: 'red',
+    scenario: 'Google 每年都会投入大量资源研发很多最后失败的项目（<span class="highlight">Google Glass</span>、<span class="highlight">Google+</span>、<span class="highlight">Stadia</span> 等）。很多项目烧掉了数亿美元。如果你是 CEO，董事会要求：未来三年利润提升 20%。你会怎么做？',
+    options: [
+      { letter: 'A', text: '立即砍掉所有亏损项目' },
+      { letter: 'B', text: '保留少量高风险创新' },
+      { letter: 'C', text: '增加研发预算' }
+    ],
+    reflectionQuote: '真正的创新者知道：利润是结果，不是目标。但资本市场的耐心有限。',
+    reflectionSummary: '你的选择揭示了你对「短期回报 vs 长期探索」的态度。在真实世界中，Google 最终选择了 B——保留高风险创新，但更审慎地筛选项目。'
+  },
+  {
+    caseNum: 'CASE 02',
+    organization: 'Berkeley',
+    question: '大学应该服务谁？',
+    identity: '学术探索者',
+    identityEn: 'Academic Explorer',
+    identityDesc: '你在精英卓越与普惠教育之间寻找平衡，探索知识的边界',
+    accent: '#4a7fb5',
+    colorName: 'blue',
+    scenario: '伯克利既要追求世界级科研又承担公共教育责任。资源有限。如果只能选一个，你会优先：',
+    options: [
+      { letter: 'A', text: '诺奖级科研' },
+      { letter: 'B', text: '更多本科教学' },
+      { letter: 'C', text: '企业合作' },
+      { letter: 'D', text: '社会公益项目' }
+    ],
+    reflectionQuote: '大学的使命不是选择服务谁——而是让不同的人都能被服务。但预算表从不讲情怀。',
+    reflectionSummary: '你的优先级反映了对「精英卓越 vs 普惠教育」的信念。现实中，伯克利一直在科研与教学之间拉扯——两种使命都重要，但资源永远不够。'
+  },
+  {
+    caseNum: 'CASE 03',
+    organization: 'Silicon Valley',
+    question: '人才还是资本？',
+    identity: '创业投资者',
+    identityEn: 'Entrepreneur Investor',
+    identityDesc: '你在人才与资本之间分配杠杆，决定创新的燃料来源',
+    accent: '#7a5aaa',
+    colorName: 'purple',
+    scenario: '假设你有 100 亿美元，只能投资一个。\n十年以后，哪个更容易产生 Google？为什么？',
+    options: [
+      { letter: 'A', text: '建设世界最好的创业基金' },
+      { letter: 'B', text: '建设世界最好的大学' }
+    ],
+    reflectionQuote: '资本可以买来人才，但人才可以创造远超资本的回报。问题是：谁来培养那些人才？',
+    reflectionSummary: '你选择了资本杠杆还是人才基石？硅谷的历史告诉我们：Google、Apple、Meta 都诞生于大学实验室和车库——资本只是后来的燃料。'
+  },
+  {
+    caseNum: 'CASE 04',
+    organization: 'Hollywood',
+    question: '算法还是创意？',
+    identity: '内容创造者',
+    identityEn: 'Content Creator',
+    identityDesc: '你在算法数据与人文创意之间做出选择，定义文化生产的未来',
+    accent: '#d4a853',
+    colorName: 'gold',
+    scenario: 'Netflix、Disney、TikTok、AI——越来越依赖数据。如果你经营一家影视公司，你会：',
+    options: [
+      { letter: 'A', text: '完全依赖用户数据拍电影' },
+      { letter: 'B', text: '坚持导演创作自由' },
+      { letter: 'C', text: '两者结合' }
+    ],
+    reflectionQuote: '数据告诉你观众「想看什么」，但创意决定观众「会爱上什么」。数据到底会不会杀死创意？',
+    reflectionSummary: '你的回答揭示了你对「算法驱动 vs 人文直觉」的立场。Netflix 用数据做出了爆款，但《教父》《肖申克的救赎》——没有一部是数据催生的。'
+  },
+  {
+    caseNum: 'CASE 05',
+    organization: '下一座城市',
+    question: '如果只能选两件？',
+    identity: '未来城市设计师',
+    identityEn: 'Future City Designer',
+    identityDesc: '你构建创新城市的底层架构，决定人才、资本与文化的交汇方式',
+    accent: '#5a9a6a',
+    colorName: 'green',
+    scenario: '如果你负责打造下一座世界创新城市，只能选两件，你选什么？',
+    options: [
+      { letter: 'A', text: '世界级大学' },
+      { letter: 'B', text: '开放移民' },
+      { letter: 'C', text: '风险投资' },
+      { letter: 'D', text: '包容失败文化' }
+    ],
+    reflectionQuote: '每一座创新城市的故事都不一样，但有一条规律：没有人是孤立创新的。',
+    reflectionSummary: '你的两件选择揭示了你对「创新生态系统」的核心假设。硅谷有大学和风投，深圳有制造和速度，柏林有包容和自由——没有标准配方。'
+  }
+];
+
+// ========== STATE ========== //
+let currentUser = null;
+let isAdmin = false;
+let currentCardIndex = -1;
+let selectedOption = null;
+let chosenTwo = [];
+let cloudData = { draws: [] };
+let cloudLoadFailed = false;
+
+// ========== CLOUD STORAGE ========== //
+function getBlobId() {
+  const hash = window.location.hash;
+  const match = hash.match(/blob=([a-fA-F0-9-]+)/i);
+  if (match) {
+    localStorage.setItem(LS_BLOB, match[1]);
+    return match[1];
+  }
+  const stored = localStorage.getItem(LS_BLOB);
+  if (stored) return stored;
+  // 裸链接（无 #blob= 也无本地记录）也使用共享云端，避免各自建 blob 导致数据分散
+  return DEFAULT_BLOB_ID;
+}
+
+function setBlobId(id) {
+  localStorage.setItem(LS_BLOB, id);
+  window.location.hash = 'blob=' + id;
+}
+
+// --- Local storage fallback ---
+const LS_LOCAL_DRAWS = 'dc_local_draws';
+function saveDrawToLocal(draw) {
+  try {
+    let local = [];
+    const raw = localStorage.getItem(LS_LOCAL_DRAWS);
+    if (raw) local = JSON.parse(raw);
+    if (!local.some(d => d.id === draw.id)) {
+      local.push(draw);
+      localStorage.setItem(LS_LOCAL_DRAWS, JSON.stringify(local));
+    }
+  } catch(e) { console.error('[DC] Local save error:', e); }
+}
+function getLocalDraws() {
+  try {
+    const raw = localStorage.getItem(LS_LOCAL_DRAWS);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return [];
+}
+function clearLocalDraws() {
+  localStorage.removeItem(LS_LOCAL_DRAWS);
+}
+
+async function syncLocalDraws() {
+  let blobId = getBlobId();
+  const localDraws = getLocalDraws();
+  if (localDraws.length === 0) { showToast('无本地缓存需要同步'); return; }
+  try {
+    showLoading('同步中...');
+    // 确保云端可用（共享 blob 不存在/过期则重建）
+    let resp = await fetch(JSONBLOB_BASE + '/' + blobId, { headers: { 'Accept': 'application/json' } });
+    if (resp.status === 404 || resp.status === 410) {
+      const newId = await createBlob();
+      setBlobId(newId);
+      blobId = newId;
+      resp = await fetch(JSONBLOB_BASE + '/' + blobId, { headers: { 'Accept': 'application/json' } });
+    }
+    if (!resp.ok) { hideLoading(); showToast('同步失败：无法读取云端数据'); return; }
+    const data = await resp.json();
+    if (!data.draws) data.draws = [];
+    const existingIds = new Set(data.draws.map(d => d.id));
+    let added = 0;
+    localDraws.forEach(d => {
+      if (!existingIds.has(d.id)) { data.draws.push(d); added++; }
+    });
+    const putResp = await fetch(JSONBLOB_BASE + '/' + blobId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (putResp.ok) {
+      clearLocalDraws();
+      cloudData = data;
+      hideLoading();
+      renderAdmin();
+      showToast('已同步 ' + added + ' 条本地记录到云端');
+    } else {
+      hideLoading();
+      showToast('同步失败：写入云端失败');
+    }
+  } catch(e) {
+    console.error('[DC] Sync error:', e);
+    hideLoading();
+    showToast('同步失败：' + e.message);
+  }
+}
+
+async function createBlob() {
+  console.log('[DC] Creating blob...');
+  const resp = await fetch(JSONBLOB_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ draws: [], createdAt: new Date().toISOString(), version: 2 })
+  });
+  if (!resp.ok) {
+    console.error('[DC] Create blob failed:', resp.status, resp.statusText);
+    throw new Error('Create blob failed: ' + resp.status);
+  }
+  let blobId = resp.headers.get('X-jsonblob-id');
+  if (!blobId) {
+    const loc = resp.headers.get('Location');
+    if (loc) blobId = loc.split('/').pop();
+  }
+  // Fallback: try to extract from response body
+  if (!blobId) {
+    try {
+      const body = await resp.clone().json();
+      if (body && body.id) blobId = body.id;
+    } catch(e) {}
+  }
+  if (!blobId) {
+    console.error('[DC] No blob ID in response. Headers:', [...resp.headers.entries()]);
+    throw new Error('No blob ID in response');
+  }
+  console.log('[DC] Blob created:', blobId);
+  return blobId;
+}
+
+async function loadCloudData() {
+  const blobId = getBlobId();
+  if (!blobId) return null;
+  console.log('[DC] Loading blob:', blobId);
+  const resp = await fetch(JSONBLOB_BASE + '/' + blobId, {
+    headers: { 'Accept': 'application/json' }
+  });
+  if (!resp.ok) {
+    if (resp.status === 404 || resp.status === 410) {
+      // 共享云端不存在或已过期：自动重建（本机本地兜底数据不丢失）
+      console.warn('[DC] Shared blob missing/expired, recreating...');
+      try {
+        const newId = await createBlob();
+        setBlobId(newId);
+        return { draws: [], createdAt: new Date().toISOString(), version: 2 };
+      } catch (e2) {
+        console.error('[DC] Recreate blob failed:', e2);
+        return null;
+      }
+    }
+    console.error('[DC] Load failed:', resp.status, resp.statusText);
+    throw new Error('Load failed: ' + resp.status);
+  }
+  const data = await resp.json();
+  if (!data.draws) data.draws = [];
+  console.log('[DC] Cloud data loaded, draws:', data.draws.length);
+  // Merge any local draws (from failed cloud saves)
+  const localDraws = getLocalDraws();
+  if (localDraws.length > 0) {
+    const existingIds = new Set(data.draws.map(d => d.id));
+    localDraws.forEach(d => {
+      if (!existingIds.has(d.id)) {
+        data.draws.push(d);
+      }
+    });
+    console.log('[DC] Merged', localDraws.length, 'local draws');
+    // Try to sync merged data back to cloud
+    try {
+      await fetch(JSONBLOB_BASE + '/' + blobId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      clearLocalDraws();
+      console.log('[DC] Local draws synced to cloud');
+    } catch(e) {
+      console.error('[DC] Sync local draws failed:', e);
+    }
+  }
+  return data;
+}
+
+async function saveDrawToCloud(draw) {
+  let blobId = getBlobId();
+  if (!blobId) {
+    console.error('[DC] No blob ID, saving to local only');
+    saveDrawToLocal(draw);
+    throw new Error('No blob ID');
+  }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      // GET current data
+      const getResp = await fetch(JSONBLOB_BASE + '/' + blobId, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!getResp.ok) {
+        console.error('[DC] GET attempt', attempt+1, 'failed:', getResp.status);
+        if (getResp.status === 404 || getResp.status === 410) {
+          // 共享云端已过期：重建后用新 id 重试，本机记录先留本地兜底
+          try {
+            const newId = await createBlob();
+            setBlobId(newId);
+            blobId = newId;
+            continue;
+          } catch (e2) {
+            saveDrawToLocal(draw);
+            throw new Error('Blob expired, saved locally');
+          }
+        }
+        // Transient error — retry
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+          continue;
+        }
+        throw new Error('GET failed: ' + getResp.status);
+      }
+      const data = await getResp.json();
+      if (!data.draws) data.draws = [];
+      // Dedup check
+      if (data.draws.some(d => d.id === draw.id)) {
+        cloudData = data;
+        console.log('[DC] Draw already exists, skipping');
+        return data;
+      }
+      // Add new draw
+      data.draws.push(draw);
+      // PUT updated data
+      const putResp = await fetch(JSONBLOB_BASE + '/' + blobId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (putResp.ok) {
+        cloudData = data;
+        console.log('[DC] Save successful, total draws:', data.draws.length);
+        return data;
+      }
+      console.error('[DC] PUT attempt', attempt+1, 'failed:', putResp.status);
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        continue;
+      }
+    } catch (e) {
+      console.error('[DC] Save attempt', attempt+1, 'error:', e.message);
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        continue;
+      }
+    }
+  }
+  // All retries failed — save to local as fallback
+  saveDrawToLocal(draw);
+  console.error('[DC] Cloud save failed after 3 retries, saved locally');
+  throw new Error('Cloud save failed after retries');
+}
+
+// ========== HELPERS ========== //
+// 合并「云端 + 本机本地缓存」并按 id 去重，确保管理员在任一台设备都能看到全部记录、导出全部记录
+function allDrawsMerged() {
+  const cloud = (cloudData && cloudData.draws) ? cloudData.draws : [];
+  const local = getLocalDraws();
+  const seen = new Set();
+  const merged = [];
+  cloud.forEach(d => { if (d && d.id && !seen.has(d.id)) { seen.add(d.id); merged.push(d); } });
+  local.forEach(d => { if (d && d.id && !seen.has(d.id)) { seen.add(d.id); merged.push(d); } });
+  return merged;
+}
+// 每个问题最多被 10 个不同用户抽取（全局上限）
+function getCardDrawCount(cardIndex) {
+  const users = new Set();
+  allDrawsMerged().forEach(d => { if (d.cardIndex === cardIndex) users.add(d.userName); });
+  return users.size;
+}
+function isCaseFull(cardIndex) {  // 该问题已被 10 个不同用户抽取
+  return getCardDrawCount(cardIndex) >= MAX_DRAWS;
+}
+// 当前登录用户是否已抽过该问题
+function hasUserDrawnCard(cardIndex) {
+  return allDrawsMerged().some(d => d.userName === currentUser && d.cardIndex === cardIndex);
+}
+// 当前用户已收集的不同问题数（用于进度展示）
+function getUserDrawnCount() {
+  const s = new Set();
+  allDrawsMerged().forEach(d => { if (d.userName === currentUser) s.add(d.cardIndex); });
+  return s.size;
+}
+// 当前用户还可抽的问题：未抽过 且 该问题未满 8 人（机会均等）
+function getAvailableCasesForUser() {
+  const avail = [];
+  cards.forEach((_, i) => {
+    if (!hasUserDrawnCard(i) && !isCaseFull(i)) avail.push(i);
+  });
+  return avail;
+}
+// 某用户第一次（最早时间戳）的抽取记录 —— 管理员按首次抽取分组用
+function getUserFirstDraw(userName) {
+  const ud = allDrawsMerged().filter(d => d.userName === userName).sort((a, b) => (a.timestamp||0) - (b.timestamp||0));
+  return ud.length ? ud[0] : null;
+}
+function hasUserDrawn() {
+  return getUserDraws().length > 0;
+}
+function getUserDraws() {
+  return allDrawsMerged().filter(d => d.userName === currentUser).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+}
+function getAllDraws() {
+  return allDrawsMerged().sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+}
+function getUniqueUsers() {
+  return [...new Set(allDrawsMerged().map(d => d.userName))];
+}
+
+// ========== ICONS ========== //
+function getCardIcon(index) {
+  const icons = [
+    '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="10" y="10" width="20" height="26" rx="1"/><line x1="14" y1="16" x2="18" y2="16" stroke-width="1"/><line x1="22" y1="16" x2="26" y2="16" stroke-width="1"/><line x1="14" y1="22" x2="18" y2="22" stroke-width="1"/><line x1="22" y1="22" x2="26" y2="22" stroke-width="1"/><line x1="14" y1="28" x2="18" y2="28" stroke-width="1"/><line x1="22" y1="28" x2="26" y2="28" stroke-width="1"/></svg>',
+    '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 12 L20 16 L32 12 L32 30 L20 34 L8 30 Z"/><line x1="20" y1="16" x2="20" y2="34"/></svg>',
+    '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="8,30 16,22 22,26 32,12"/><circle cx="32" cy="12" r="2.5" fill="currentColor"/><line x1="8" y1="34" x2="32" y2="34"/></svg>',
+    '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="20" cy="20" r="14"/><path d="M16 13 L29 20 L16 27 Z" fill="currentColor"/></svg>',
+    '<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="20" cy="20" r="14"/><path d="M20 8 L24 20 L20 32 L16 20 Z"/><circle cx="20" cy="20" r="2" fill="currentColor"/></svg>'
+  ];
+  return icons[index] || '';
+}
+
+// ========== NAVIGATION ========== //
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.classList.add('hidden');
+  });
+  const target = document.getElementById(id);
+  target.classList.remove('hidden');
+  target.classList.add('active');
+}
+
+function showLogin() {
+  currentUser = null;
+  isAdmin = false;
+  localStorage.removeItem(LS_USER);
+  localStorage.removeItem(LS_ADMIN);
+  document.getElementById('nameInput').value = '';
+  const ac = document.getElementById('adminCodeInput');
+  if (ac) ac.value = '';
+  document.getElementById('adminCodeRow').classList.remove('show');
+  showScreen('loginScreen');
+}
+
+function showMain() {
+  if (hasUserDrawn()) { showResult(); return; }
+  document.getElementById('headerUserName').textContent = currentUser;
+  document.getElementById('adminBtn').style.display = isAdmin ? '' : 'none';
+  renderCards();
+  showScreen('mainScreen');
+}
+
+function showHistory() { renderHistory(); showScreen('historyScreen'); }
+async function showAdmin() {
+  showScreen('adminScreen');
+  showLoading('加载最新数据...');
+  try { const fresh = await loadCloudData(); if (fresh) cloudData = fresh; } catch (e) { console.error('[DC] Admin load error:', e.message); }
+  hideLoading();
+  renderAdmin();
+  autoBackupOnAdminOpen();
+}
+
+// 已抽过卡的用户，主页=结果屏；未抽过的用户，主页=抽卡屏
+function goHome() {
+  if (hasUserDrawn()) showResult();
+  else showMain();
+}
+
+// ========== RESULT (single draw) ========== //
+function renderResult() {
+  const first = getUserFirstDraw(currentUser) || getUserDraws()[0];
+  if (!first) { showMain(); return; }
+  const card = cards[first.cardIndex];
+  const banner = document.getElementById('resultBanner');
+  banner.dataset.color = card.colorName;
+  banner.classList.remove('identity-reveal', 'identity-reveal-glow');
+  void banner.offsetWidth;
+  banner.classList.add('identity-reveal', 'identity-reveal-glow');
+  document.getElementById('resultIdentityName').textContent = card.identity;
+  document.getElementById('resultIdentityName').dataset.color = card.colorName;
+  document.getElementById('resultIdentityDesc').textContent = card.identityDesc;
+  document.getElementById('resultTitle').textContent = card.organization;
+  document.getElementById('resultQuestion').textContent = card.question;
+  document.getElementById('resultChoice').textContent = '你选择了：' + first.selectedOption;
+  const reasonEl = document.getElementById('resultReason');
+  if (first.reason) {
+    reasonEl.textContent = '你的理由：' + first.reason;
+    reasonEl.classList.remove('hidden');
+  } else {
+    reasonEl.classList.add('hidden');
+  }
+  document.getElementById('resultQuote').textContent = card.reflectionQuote;
+  document.getElementById('resultSummary').textContent = card.reflectionSummary;
+}
+function showResult() { renderResult(); showScreen('resultScreen'); }
+
+function logout() {
+  showLogin();
+  setTimeout(() => location.reload(), 300);
+}
+
+// ========== LOGIN ========== //
+function toggleAdminLogin() {
+  const row = document.getElementById('adminCodeRow');
+  row.classList.toggle('show');
+  if (row.classList.contains('show')) {
+    setTimeout(() => document.getElementById('adminCodeInput').focus(), 100);
+  }
+}
+
+function handleLogin() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) { showToast('请输入学号'); return; }
+  const acEl = document.getElementById('adminCodeInput');
+  const adminCode = acEl ? acEl.value.trim() : '';
+  const isAdminLogin = adminCode && sha256(adminCode) === ADMIN_CODE_HASH;
+
+  // 管理员凭密码登录，不受学号白名单限制；普通用户必须在白名单内
+  if (!isAdminLogin && !ALLOWED_STUDENT_IDS.includes(name)) {
+    showToast('学号不匹配，请输入自己的学号');
+    document.getElementById('nameInput').value = '';
+    return;
+  }
+
+  currentUser = name;
+  isAdmin = isAdminLogin;
+  localStorage.setItem(LS_USER, name);
+  localStorage.setItem(LS_ADMIN, isAdminLogin.toString());
+
+  if (isAdmin) {
+    // 管理员：云端已就绪则进入主页/结果；云端拉取失败则进入初始化页（与原有逻辑一致）
+    if (cloudLoadFailed) {
+      document.getElementById('initUserName').textContent = name;
+      document.getElementById('initSuccessBox').style.display = 'none';
+      showScreen('initScreen');
+    } else {
+      if (hasUserDrawn()) showResult();
+      else showMain();
+    }
+    return;
+  }
+
+  // 学生：白名单已通过校验即直接进入抽卡；云端不可达时降级为本地模式，不再拦截登录
+  if (!cloudData || !cloudData.draws) cloudData = { draws: [] };
+  if (hasUserDrawn()) showResult();
+  else showMain();
+}
+
+function backToLogin() {
+  showScreen('loginScreen');
+}
+
+// ========== INITIALIZE DATA ========== //
+async function initializeData() {
+  try {
+    showLoading('初始化数据中...');
+    // 采用所有设备共享的固定云端，避免各自建 blob 导致数据分散
+    if (!getBlobId()) setBlobId(DEFAULT_BLOB_ID);
+    cloudData = { draws: [], createdAt: new Date().toISOString() };
+    hideLoading();
+    document.getElementById('initSuccessBox').style.display = '';
+    document.getElementById('initLinkBox').textContent = window.location.href;
+    showToast('初始化成功！');
+    setTimeout(() => showMain(), 1500);
+  } catch (e) {
+    console.error('[DC] Init error:', e.message);
+    hideLoading();
+    showToast('初始化失败：' + e.message);
+  }
+}
+
+function copyLink() {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('链接已复制到剪贴板');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('链接已复制');
+  });
+}
+
+// ========== CARD RENDER ========== //
+function renderCards() {
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = '';
+
+  const fanRotations = ['-14deg','-7deg','0deg','7deg','14deg'];
+
+  cards.forEach((card, i) => {
+    const el = document.createElement('div');
+    el.className = 'fan-card fade-in';
+    el.style.animationDelay = (i * 0.1) + 's';
+    el.style.setProperty('--rot', fanRotations[i]);
+    el.onclick = () => drawFromCard(i);
+
+    const ornamentSVG = '<svg viewBox="0 0 56 56" fill="none" stroke="rgba(212,168,83,0.3)" stroke-width="1"><path d="M28 8 L40 28 L28 48 L16 28 Z"/><circle cx="28" cy="28" r="6" stroke-width="1.5"/><line x1="28" y1="14" x2="28" y2="20"/><line x1="28" y1="36" x2="28" y2="42"/><line x1="14" y1="28" x2="20" y2="28"/><line x1="36" y1="28" x2="42" y2="28"/></svg>';
+
+    el.innerHTML =
+      '<div class="card-back-ornament">' +
+        '<div class="ornament-icon">' + ornamentSVG + '</div>' +
+        '<div class="ornament-text">Decision</div>' +
+      '</div>' +
+      '<div class="card-back-seal"></div>';
+
+    grid.appendChild(el);
+  });
+
+  // 进度提示：单次抽卡说明（不展示"每题限抽10次"）
+  const bar = document.getElementById('remainingBar');
+  if (bar) {
+    bar.innerHTML = '<div class="progress-pill">每位参与者仅可抽卡一次 · 抽完即确定身份</div>';
+  }
+
+  // 提示文案
+  const hint = document.getElementById('drawHint');
+  const allDrawnMsg = document.getElementById('allDrawnMsg');
+  if (getAvailableCasesForUser().length === 0) {
+    hint.textContent = '所有卡牌名额已抽满';
+    if (allDrawnMsg) allDrawnMsg.classList.remove('hidden');
+  } else {
+    hint.textContent = '点击任意卡牌，随机翻开一张决策卡（机会均等）';
+    if (allDrawnMsg) allDrawnMsg.classList.add('hidden');
+  }
+}
+
+// ========== RANDOM DRAW ========== //
+let isDealing = false;
+
+// 点击某张卡：先给所有卡一个轻快"发牌"脉冲（即时反馈触摸），再从可用卡池随机翻一张
+// 这样既保留 20% 均等随机，又让每一轮（含第二次及以后）的摸牌手感都跟手顺滑
+function drawFromCard(clickedIndex) {
+  if (isDealing) return;
+  const available = getAvailableCasesForUser();
+  if (available.length === 0) { showToast('所有卡牌名额已抽满'); return; }
+
+  const grid = document.getElementById('cardGrid');
+  const cardEls = grid ? grid.querySelectorAll('.fan-card') : [];
+  if (cardEls.length === 0) { drawRandomCard(); return; } // 兜底：直接随机
+
+  isDealing = true;
+  cardEls.forEach((el, idx) => {
+    el.classList.add('dealing');
+    el.onclick = null;                 // 发牌期间禁用点击，避免重复触发
+    if (idx === clickedIndex) el.classList.add('dealing-focus');
+  });
+  // 脉冲结束后翻出随机卡（结果仍为均等随机，不受点击影响）
+  setTimeout(() => {
+    isDealing = false;
+    drawRandomCard();
+  }, 420);
+}
+
+function drawRandomCard() {
+  // 从"当前用户未抽过 且 该问题未满 8 人"的卡中随机抽一张（机会均等）
+  const available = getAvailableCasesForUser();
+
+  if (available.length === 0) {
+    showToast('所有卡牌名额已抽满');
+    return;
+  }
+
+  const randomIndex = available[Math.floor(Math.random() * available.length)];
+  console.log('[DC] Drew card', randomIndex, 'from', available.length, 'available');
+
+  currentCardIndex = randomIndex;
+  selectedOption = null;
+  chosenTwo = [];
+  setupReveal(randomIndex);
+  showScreen('revealScreen');
+}
+
+function setupReveal(cardIndex) {
+  const card = cards[cardIndex];
+
+  const front = document.getElementById('revealFrontCard');
+  front.dataset.case = cardIndex;
+  front.classList.remove('hidden-card');
+  document.getElementById('caseOrg').textContent = card.organization;
+  document.getElementById('caseQuestion').textContent = card.question;
+
+  const back = document.getElementById('revealBackPanel');
+  back.dataset.case = cardIndex;
+  back.classList.add('hidden-card');
+  back.classList.remove('visible-card');
+  document.getElementById('backOrg').textContent = card.organization;
+  document.getElementById('backOrg').dataset.color = card.colorName;
+  document.getElementById('backQuestion').textContent = card.question;
+  document.getElementById('scenarioText').innerHTML = card.scenario;
+
+  const optionsList = document.getElementById('optionsList');
+  optionsList.innerHTML = '';
+  const isMulti = cardIndex === 4;
+  card.options.forEach((opt, i) => {
+    const item = document.createElement('div');
+    item.className = 'option-item fade-in';
+    item.style.animationDelay = (i * 0.06 + 0.2) + 's';
+    item.onclick = () => chooseOption(opt, item, isMulti);
+    item.innerHTML = '<span class="option-letter">' + opt.letter + '</span><span class="option-text">' + opt.text + '</span>';
+    optionsList.appendChild(item);
+  });
+
+  document.getElementById('whySection').classList.add('hidden');
+  document.getElementById('whyInput').value = '';
+  document.getElementById('actionRow').classList.add('hidden');
+  document.getElementById('revealActions').innerHTML = '<button class="flip-btn" id="flipBtn" onclick="flipRevealCard()">翻开背面 →</button>';
+}
+
+function flipRevealCard() {
+  const front = document.getElementById('revealFrontCard');
+  const back = document.getElementById('revealBackPanel');
+  const flipBtn = document.getElementById('flipBtn');
+  if (front.classList.contains('hidden-card')) {
+    // 当前显示背面 → 翻回正面
+    back.classList.remove('visible-card');
+    back.classList.add('hidden-card');
+    front.classList.remove('hidden-card');
+    if (flipBtn) { flipBtn.style.display = ''; flipBtn.textContent = '翻开背面 →'; }
+    document.getElementById('actionRow').classList.add('hidden');
+  } else {
+    // 当前显示正面 → 翻到背面
+    front.classList.add('hidden-card');
+    setTimeout(() => {
+      back.classList.remove('hidden-card');
+      back.classList.add('visible-card');
+    }, 200);
+    if (flipBtn) flipBtn.style.display = 'none';
+    setTimeout(() => document.getElementById('actionRow').classList.remove('hidden'), 500);
+  }
+}
+
+function chooseOption(opt, element, isMulti) {
+  if (isMulti) {
+    if (chosenTwo.includes(opt)) {
+      chosenTwo = chosenTwo.filter(o => o !== opt);
+      element.classList.remove('chosen');
+    } else if (chosenTwo.length < 2) {
+      chosenTwo.push(opt);
+      element.classList.add('chosen');
+    }
+    document.getElementById('whySection').classList.toggle('hidden', chosenTwo.length !== 2);
+  } else {
+    document.querySelectorAll('.option-item').forEach(el => el.classList.remove('chosen'));
+    element.classList.add('chosen');
+    selectedOption = opt;
+    document.getElementById('whySection').classList.remove('hidden');
+  }
+}
+
+function cancelDraw() {
+  currentCardIndex = -1;
+  selectedOption = null;
+  chosenTwo = [];
+  showMain();
+}
+
+async function submitChoice() {
+  const card = cards[currentCardIndex];
+  const isMulti = currentCardIndex === 4;
+
+  if (isMulti && chosenTwo.length < 2) { showToast('请选择两项'); return; }
+  if (!isMulti && !selectedOption) { showToast('请选择一项'); return; }
+
+  const whyText = document.getElementById('whyInput').value.trim();
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '保存中...';
+
+  const choiceText = isMulti
+    ? chosenTwo.map(o => o.letter + '. ' + o.text).join(' + ')
+    : selectedOption.letter + '. ' + selectedOption.text;
+
+  const draw = {
+    id: Date.now() + '-' + Math.random().toString(36).slice(2, 11),
+    userName: currentUser,
+    cardIndex: currentCardIndex,
+    organization: card.organization,
+    question: card.question,
+    identity: card.identity,
+    selectedOption: choiceText,
+    reason: whyText,
+    timestamp: Date.now(),
+    dateStr: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+  };
+
+  try {
+    await saveDrawToCloud(draw);
+    submitBtn.disabled = false;
+    submitBtn.textContent = '完成选择';
+    setupReflection();
+    showScreen('reflectionScreen');
+  } catch (e) {
+    console.error('[DC] Save error:', e.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = '完成选择';
+    // Still show identity reveal — don't block the experience
+    // Draw was saved locally as fallback
+    cloudData = cloudData || { draws: [] };
+    if (!cloudData.draws) cloudData.draws = [];
+    if (!cloudData.draws.some(d => d.id === draw.id)) {
+      cloudData.draws.push(draw);
+    }
+    setupReflection();
+    showScreen('reflectionScreen');
+    showToast('记录已保存到本地（云端同步稍后自动重试）');
+  }
+}
+
+// ========== REFLECTION ========== //
+function setupReflection() {
+  const card = cards[currentCardIndex];
+  const banner = document.getElementById('reflectionBanner');
+  banner.dataset.color = card.colorName;
+  // Restart reveal animation
+  banner.classList.remove('identity-reveal', 'identity-reveal-glow');
+  void banner.offsetWidth;
+  banner.classList.add('identity-reveal', 'identity-reveal-glow');
+
+  document.getElementById('reflectionIdentityName').textContent = card.identity;
+  document.getElementById('reflectionIdentityName').dataset.color = card.colorName;
+  document.getElementById('reflectionIdentityDesc').textContent = card.identityDesc;
+
+  document.getElementById('reflectionTitle').textContent = card.organization;
+  document.getElementById('reflectionQuestion').textContent = card.question;
+  document.getElementById('reflectionQuote').textContent = card.reflectionQuote;
+  document.getElementById('reflectionSummary').textContent = card.reflectionSummary;
+
+  const isMulti = currentCardIndex === 4;
+  const choiceText = isMulti
+    ? chosenTwo.map(o => o.letter + '. ' + o.text).join(' + ')
+    : selectedOption.letter + '. ' + selectedOption.text;
+  document.getElementById('reflectionChoice').textContent = '你选择了：' + choiceText;
+
+  const whyText = document.getElementById('whyInput').value.trim();
+  const reasonEl = document.getElementById('reflectionReason');
+  if (whyText) {
+    reasonEl.textContent = '你的理由：' + whyText;
+    reasonEl.classList.remove('hidden');
+  } else {
+    reasonEl.classList.add('hidden');
+  }
+}
+
+// ========== HISTORY ========== //
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  const draws = getUserDraws();
+
+  if (draws.length === 0) {
+    list.innerHTML = '<div class="empty-msg">你还没有抽过任何牌</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  draws.forEach(draw => {
+    const card = cards[draw.cardIndex];
+    const item = document.createElement('div');
+    item.className = 'history-item fade-in';
+    item.dataset.color = card.colorName;
+    item.innerHTML =
+      '<div class="history-item-header">' +
+        '<span class="history-identity" data-color="' + card.colorName + '">' + card.identity + '</span>' +
+        '<span class="history-time">' + (draw.dateStr || '') + '</span>' +
+      '</div>' +
+      '<div class="history-org">' + draw.organization + ' — ' + draw.question + '</div>' +
+      '<div class="history-choice">选择：' + draw.selectedOption + '</div>' +
+      (draw.reason ? '<div class="history-reason">"' + draw.reason + '"</div>' : '');
+    list.appendChild(item);
+  });
+}
+
+// ========== ADMIN ========== //
+function renderAdmin() {
+  const allDraws = getAllDraws();
+  const totalDraws = allDraws.length;
+  const totalUsers = getUniqueUsers().length;
+  const maxTotal = MAX_DRAWS * cards.length;
+
+  // Debug status box
+  const blobId = getBlobId();
+  const localDraws = getLocalDraws();
+  const debugEl = document.getElementById('adminDebugBox');
+  if (debugEl) {
+    debugEl.innerHTML =
+      '<div style="margin-bottom:4px;"><span style="color:var(--gold);">云端状态:</span> ' + (blobId ? '<span style="color:#5a9a6a;">已连接</span>' : '<span style="color:var(--accent-red);">未初始化</span>') + '</div>' +
+      '<div style="margin-bottom:4px;"><span style="color:var(--gold);">Blob ID:</span> <code style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">' + (blobId || '无') + '</code></div>' +
+      '<div style="margin-bottom:4px;"><span style="color:var(--gold);">云端记录:</span> ' + (cloudData && cloudData.draws ? cloudData.draws.length : 0) + ' 条</div>' +
+      '<div><span style="color:var(--gold);">本地缓存:</span> ' + localDraws.length + ' 条' + (localDraws.length > 0 ? ' <button onclick="syncLocalDraws()" style="margin-left:8px;padding:2px 10px;font-size:0.7rem;background:var(--gold);color:var(--bg-deep);border:none;border-radius:4px;cursor:pointer;">手动同步</button>' : '') + '</div>';
+  }
+  const linkInput = document.getElementById('adminDataLinkInput');
+  if (linkInput) {
+    const bid = getBlobId();
+    linkInput.value = window.location.origin + window.location.pathname + (bid ? '#blob=' + bid : '');
+  }
+
+  const usedSlots = cards.reduce((s, _, i) => s + getCardDrawCount(i), 0);
+  const remainingCapacity = maxTotal - usedSlots;
+  document.getElementById('adminStats').innerHTML =
+    '<div class="stat-box"><div class="stat-num">' + totalDraws + '</div><div class="stat-label">总抽卡数</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + totalUsers + '</div><div class="stat-label">参与人数</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + remainingCapacity + '</div><div class="stat-label">剩余名额</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + cards.filter((_, i) => getCardDrawCount(i) >= MAX_DRAWS).length + '</div><div class="stat-label">已满卡牌</div></div>';
+
+  const statsEl = document.getElementById('adminCardStats');
+  statsEl.innerHTML = '';
+  cards.forEach((card, i) => {
+    const count = getCardDrawCount(i);
+    const pct = (count / MAX_DRAWS * 100);
+    const row = document.createElement('div');
+    row.className = 'card-stat-row';
+    row.innerHTML =
+      '<div class="card-stat-name" style="color:' + card.accent + ';">' + card.identity + '</div>' +
+      '<div class="card-stat-bar"><div class="card-stat-fill" data-color="' + card.colorName + '" style="width:' + pct + '%"></div></div>' +
+      '<div class="card-stat-num">' + count + '/' + MAX_DRAWS + '</div>';
+    statsEl.appendChild(row);
+  });
+
+  // 按"每个用户第一次抽取"分组
+  const groupingEl = document.getElementById('adminGrouping');
+  if (groupingEl) {
+    const users = getUniqueUsers();
+    const groups = {};   // cardIndex -> [userName,...]
+    const groupFirst = {}; // cardIndex -> [draw,...]
+    users.forEach(u => {
+      const fd = getUserFirstDraw(u);
+      if (!fd) return;
+      (groups[fd.cardIndex] = groups[fd.cardIndex] || []).push(u);
+      (groupFirst[fd.cardIndex] = groupFirst[fd.cardIndex] || []).push(fd);
+    });
+    let html = '<h3 class="admin-section-title">按首次抽取分组（共 ' + users.length + ' 人）</h3>';
+    cards.forEach((card, i) => {
+      const members = groups[i] || [];
+      const firsts = groupFirst[i] || [];
+      html +=
+        '<div class="group-row">' +
+          '<div class="group-head" style="border-left-color:' + card.accent + ';">' +
+            '<span class="group-name">' + card.identity + '</span>' +
+            '<span class="group-count">' + members.length + ' 人</span>' +
+          '</div>' +
+          '<div class="group-members">' + (members.length
+            ? members.map(m => '<span class="member-chip">' + escapeHtml(m) + '</span>').join('')
+            : '<span class="group-empty">暂无</span>') +
+          '</div>' +
+        '</div>';
+    });
+    groupingEl.innerHTML = html;
+  }
+
+  const tbody = document.getElementById('adminTableBody');
+  if (allDraws.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">暂无抽卡记录</td></tr>';
+  } else {
+    tbody.innerHTML = '';
+    allDraws.forEach((d, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + (i + 1) + '</td>' +
+        '<td>' + (d.dateStr || '') + '</td>' +
+        '<td>' + escapeHtml(d.userName) + '</td>' +
+        '<td>' + escapeHtml(d.organization) + '</td>' +
+        '<td class="col-identity">' + escapeHtml(d.identity) + '</td>' +
+        '<td>' + escapeHtml(d.selectedOption) + '</td>' +
+        '<td>' + escapeHtml(d.reason || '') + '</td>';
+      tbody.appendChild(tr);
+    });
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function exportData() {
+  // 导出「云端 + 本地」合并后的全部记录，确保管理员能下载到完整数据
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    source: 'decision-cards',
+    blobId: getBlobId(),
+    draws: getAllDraws()
+  };
+  const data = JSON.stringify(payload, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'decision-cards-records-' + new Date().toISOString().split('T')[0] + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('数据已导出（' + payload.draws.length + ' 条）');
+}
+
+function exportCSV() {
+  const allDraws = getAllDraws();
+  if (allDraws.length === 0) { showToast('暂无记录可导出'); return; }
+  const headers = ['序号', '时间', '姓名', '卡牌主题', '身份', '选择', '理由'];
+  const rows = allDraws.map(function (d, i) {
+    return [
+      (i + 1),
+      d.dateStr || '',
+      d.userName || '',
+      d.organization || '',
+      d.identity || '',
+      d.selectedOption || '',
+      (d.reason || '').replace(/\r?\n/g, ' ')
+    ];
+  });
+  let csv = '﻿' + headers.join(',') + '\n';
+  rows.forEach(function (r) {
+    csv += r.map(function (cell) {
+      let s = String(cell == null ? '' : cell);
+      if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) s = '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }).join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'card-records-' + new Date().toISOString().split('T')[0] + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV 已导出并开始下载');
+}
+
+// 打开后台时自动下载一份备份（每会话仅一次），确保云端过期后本地仍有文件留存
+let __adminAutoBackedUp = false;
+function autoBackupOnAdminOpen() {
+  if (__adminAutoBackedUp) return;
+  const allDraws = getAllDraws();
+  if (allDraws.length === 0) return;
+  __adminAutoBackedUp = true;
+  const headers = ['序号', '时间', '姓名', '卡牌主题', '身份', '选择', '理由'];
+  const rows = allDraws.map(function (d, i) {
+    return [(i + 1), d.dateStr || '', d.userName || '', d.organization || '', d.identity || '', d.selectedOption || '', (d.reason || '').replace(/\r?\n/g, ' ')];
+  });
+  let csv = '﻿' + headers.join(',') + '\n';
+  rows.forEach(function (r) {
+    csv += r.map(function (cell) {
+      let s = String(cell == null ? '' : cell);
+      if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) s = '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }).join(',') + '\n';
+  });
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'auto-backup-card-records-' + ts + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('已自动备份 ' + allDraws.length + ' 条到下载文件');
+}
+
+async function refreshAdminData() {
+  showLoading('刷新中...');
+  try { const fresh = await loadCloudData(); if (fresh) cloudData = fresh; } catch (e) { console.error('[DC] Refresh error:', e.message); }
+  hideLoading();
+  renderAdmin();
+  showToast('数据已刷新');
+}
+
+function copyDataLink() {
+  const inp = document.getElementById('adminDataLinkInput');
+  if (!inp) return;
+  const val = inp.value;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(val).then(function () { showToast('数据链接已复制'); }).catch(function () { fallbackCopy(val); });
+  } else {
+    fallbackCopy(val);
+  }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); showToast('数据链接已复制'); } catch (e) { showToast('复制失败，请手动复制'); }
+  document.body.removeChild(ta);
+}
+
+async function resetAllDraws() {
+  if (!confirm('确定要清空全部抽卡记录吗？此操作不可撤销，所有卡牌将立即恢复为可抽状态。')) return;
+  cloudData = cloudData || { draws: [] };
+  cloudData.draws = [];
+  const blobId = getBlobId();
+  try {
+    if (blobId) {
+      showLoading('重置中...');
+      await fetch(JSONBLOB_BASE + '/' + blobId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(cloudData)
+      });
+      clearLocalDraws();
+      hideLoading();
+    } else {
+      clearLocalDraws();
+    }
+    showToast('已全部清空，卡牌恢复可抽');
+  } catch (e) {
+    console.error('[DC] Reset failed:', e);
+    hideLoading();
+    showToast('云端重置失败，已本地清空');
+  }
+  renderAdmin();
+}
+
+// ========== UTILS ========== //
+function showLoading(msg) {
+  document.getElementById('loadingText').textContent = msg || '加载中...';
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.add('hidden'), 3000);
+}
+
+function generateStars() {
+  const c = document.getElementById('starsContainer');
+  for (let i = 0; i < 50; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 100 + '%';
+    s.style.animationDelay = Math.random() * 4 + 's';
+    s.style.animationDuration = (3 + Math.random() * 3) + 's';
+    if (Math.random() > 0.7) { s.style.width = '3px'; s.style.height = '3px'; s.style.background = 'rgba(212,168,83,0.8)'; }
+    c.appendChild(s);
+  }
+}
+
+// ========== INIT ========== //
+async function init() {
+  generateStars();
+
+  // Try to load cloud data
+  const blobId = getBlobId();
+  if (blobId) {
+    try {
+      cloudData = await loadCloudData();
+      cloudLoadFailed = false;
+    } catch (e) {
+      console.error('[DC] Init load error:', e.message);
+      cloudData = { draws: [] };
+      cloudLoadFailed = true;
+    }
+  } else {
+    console.log('[DC] No blob ID found');
+    cloudData = { draws: [] };
+    cloudLoadFailed = true;
+  }
+
+  // Auto-login if user saved
+  const savedUser = localStorage.getItem(LS_USER);
+  if (savedUser && cloudData) {
+    currentUser = savedUser;
+    isAdmin = localStorage.getItem(LS_ADMIN) === 'true';
+    showMain();
+  } else {
+    showScreen('loginScreen');
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
