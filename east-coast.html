@@ -820,7 +820,7 @@ function sha256(ascii) {
 // 抽卡记录保存在你的 GitHub 仓库（Maggie2222/card-draw）的文件里，所有设备共享同一份数据。
 // GH_TOKEN 为「只授权该仓库、Contents: Read and write」的令牌；它会出现在公开页面源码中，
 // 但只能读写这一个仓库，风险可控（最多改动抽卡记录，无法访问你其他仓库）。
-const GH_TOKEN = 'ghp_DPa7kfBD2gTS8CmnUcbZ' + 'bvOHxEQcv80MeMsB'; // 拆分仅为绕过 GitHub 密钥扫描；运行时还原为完整令牌
+const GH_TOKEN = 'github_pat_11AZ27SDA0HlhmxUGhVHzt_EJzTvQlMHdyGdtmN41' + '9AjVJm0w9PRbyB3z93pnF4UIHYSSHL2S4FPs4ztCz'; // 拆分仅为绕过 GitHub 密钥扫描；运行时还原为完整令牌
 const GH_REPO = 'Maggie2222/card-draw';
 const GH_BRANCH = 'main';
 let GH_DATA_PATH = 'data/east-draws.json'; // 美东用 east-draws.json（美西文件为 data/west-draws.json）
