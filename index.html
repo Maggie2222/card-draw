@@ -1084,8 +1084,10 @@ function allDrawsMerged() {
   const local = getLocalDraws();
   const seen = new Set();
   const merged = [];
-  cloud.forEach(d => { if (d && d.id && !seen.has(d.id)) { seen.add(d.id); merged.push(d); } });
-  local.forEach(d => { if (d && d.id && !seen.has(d.id)) { seen.add(d.id); merged.push(d); } });
+  // 只采纳属于本页面白名单的学号记录，确保记录与名单严格对应（跨页串号会被自动过滤）
+  const allowed = new Set(ALLOWED_STUDENT_IDS);
+  cloud.forEach(d => { if (d && d.id && !seen.has(d.id) && allowed.has(d.userName)) { seen.add(d.id); merged.push(d); } });
+  local.forEach(d => { if (d && d.id && !seen.has(d.id) && allowed.has(d.userName)) { seen.add(d.id); merged.push(d); } });
   return merged;
 }
 // 每个问题最多被 10 个不同用户抽取（全局上限）
@@ -1613,7 +1615,7 @@ function renderAdmin() {
     debugEl.innerHTML =
       '<div style="margin-bottom:4px;"><span style="color:var(--gold);">存储:</span> <span style="color:#5a9a6a;">GitHub 仓库</span></div>' +
       '<div style="margin-bottom:4px;"><span style="color:var(--gold);">数据文件:</span> <code style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">' + GH_DATA_PATH + '</code></div>' +
-      '<div style="margin-bottom:4px;"><span style="color:var(--gold);">云端记录:</span> ' + (cloudData && cloudData.draws ? cloudData.draws.length : 0) + ' 条</div>' +
+      '<div style="margin-bottom:4px;"><span style="color:var(--gold);">云端记录:</span> ' + allDraws.length + ' 条（已按本页白名单过滤）</div>' +
       '<div><span style="color:var(--gold);">本地缓存:</span> ' + localDraws.length + ' 条' + (localDraws.length > 0 ? ' <button onclick="syncLocalDraws()" style="margin-left:8px;padding:2px 10px;font-size:0.7rem;background:var(--gold);color:var(--bg-deep);border:none;border-radius:4px;cursor:pointer;">手动同步</button>' : '') + '</div>';
   }
   const linkInput = document.getElementById('adminDataLinkInput');
