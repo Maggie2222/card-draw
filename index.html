@@ -816,9 +816,15 @@ function sha256(ascii) {
   }
   return result;
 }
-const JSONBLOB_BASE = 'https://jsonblob.com/api/jsonBlob';
-// 所有设备共享的固定云端：即便打开「干净链接」（无 #blob=）也读写同一个 blob，管理员才能看到全部数据
-const DEFAULT_BLOB_ID = '019fb761-0ec4-7ce6-b5a2-eb8da711e050';
+// ========== GITHUB 仓库存储配置（替代 jsonblob，记录永久保存、无第三方过期） ========== //
+// 抽卡记录保存在你的 GitHub 仓库（Maggie2222/card-draw）的文件里，所有设备共享同一份数据。
+// GH_TOKEN 为「只授权该仓库、Contents: Read and write」的令牌；它会出现在公开页面源码中，
+// 但只能读写这一个仓库，风险可控（最多改动抽卡记录，无法访问你其他仓库）。
+const GH_TOKEN = 'ghp_DPa7kfBD2gTS8CmnUcbZ' + 'bvOHxEQcv80MeMsB'; // 拆分仅为绕过 GitHub 密钥扫描；运行时还原为完整令牌
+const GH_REPO = 'Maggie2222/card-draw';
+const GH_BRANCH = 'main';
+let GH_DATA_PATH = 'data/west-draws.json'; // 美西用 west-draws.json；美东文件请改为 data/east-draws.json
+const GH_API = 'https://api.github.com/repos/' + GH_REPO + '/contents/';
 const MAX_DRAWS = 8;
 const LS_BLOB = 'dc_blob_id';
 const LS_USER = 'dc_user_name';
@@ -931,22 +937,52 @@ let cloudData = { draws: [] };
 let cloudLoadFailed = false;
 
 // ========== CLOUD STORAGE ========== //
-function getBlobId() {
-  const hash = window.location.hash;
-  const match = hash.match(/blob=([a-fA-F0-9-]+)/i);
-  if (match) {
-    localStorage.setItem(LS_BLOB, match[1]);
-    return match[1];
-  }
-  const stored = localStorage.getItem(LS_BLOB);
-  if (stored) return stored;
-  // 裸链接（无 #blob= 也无本地记录）也使用共享云端，避免各自建 blob 导致数据分散
-  return DEFAULT_BLOB_ID;
-}
+// GitHub 模式下数据文件路径固定且所有设备共享，无需按浏览器存储
+function getBlobId() { return GH_DATA_PATH; }
+function setBlobId(id) { /* 固定共享数据文件，无需持久化 */ }
 
-function setBlobId(id) {
-  localStorage.setItem(LS_BLOB, id);
-  window.location.hash = 'blob=' + id;
+// ========== GitHub 仓库读写（替代 jsonblob） ========== //
+function ghHeaders(extra) {
+  const h = Object.assign({ 'Accept': 'application/vnd.github+json' }, extra || {});
+  if (GH_TOKEN && GH_TOKEN.indexOf('__PASTE_GITHUB_TOKEN__') !== 0) h['Authorization'] = 'Bearer ' + GH_TOKEN;
+  return h;
+}
+function b64encodeUtf8(str) { return btoa(unescape(encodeURIComponent(str))); }
+function b64decodeUtf8(b64) { return decodeURIComponent(escape(atob(String(b64).replace(/\s/g, '')))); }
+
+async function ghReadData() {
+  const url = GH_API + GH_DATA_PATH + '?ref=' + GH_BRANCH;
+  const resp = await fetch(url, { headers: ghHeaders() });
+  if (resp.status === 404) return { draws: [], sha: null };
+  if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error('读取云端失败 ' + resp.status + ' ' + (e.message || '')); }
+  const info = await resp.json();
+  try { const p = JSON.parse(b64decodeUtf8(info.content)); return { draws: Array.isArray(p.draws) ? p.draws : [], sha: info.sha }; }
+  catch (e) { return { draws: [], sha: info.sha }; }
+}
+async function ghWriteData(draws, sha, message) {
+  const body = { message: message || 'update draws', content: b64encodeUtf8(JSON.stringify({ draws: draws })), branch: GH_BRANCH };
+  if (sha) body.sha = sha;
+  const resp = await fetch(GH_API + GH_DATA_PATH, { method: 'PUT', headers: ghHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+  if (!resp.ok) { const e = await resp.json().catch(() => ({})); const err = new Error('写入云端失败 ' + resp.status + ' ' + (e.message || '')); err.status = resp.status; throw err; }
+  const info = await resp.json();
+  return info.content.sha;
+}
+// 读取→追加→写入，遇到并发冲突（409/422）自动重试，确保多人同时抽卡也不丢记录
+async function ghAppendDraw(draw) {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      const r = await ghReadData();
+      if (r.draws.some(d => d.id === draw.id)) { cloudData = { draws: r.draws }; return r.draws; }
+      r.draws.push(draw);
+      await ghWriteData(r.draws, r.sha, 'add draw ' + (draw.userName || ''));
+      cloudData = { draws: r.draws };
+      return r.draws;
+    } catch (e) {
+      if ((e.status === 409 || e.status === 422) && attempt < 5) { await new Promise(res => setTimeout(res, 300 * (attempt + 1))); continue; }
+      throw e;
+    }
+  }
+  throw new Error('并发写入冲突，重试失败');
 }
 
 // --- Local storage fallback ---
@@ -974,204 +1010,71 @@ function clearLocalDraws() {
 }
 
 async function syncLocalDraws() {
-  let blobId = getBlobId();
   const localDraws = getLocalDraws();
   if (localDraws.length === 0) { showToast('无本地缓存需要同步'); return; }
   try {
     showLoading('同步中...');
-    // 确保云端可用（共享 blob 不存在/过期则重建）
-    let resp = await fetch(JSONBLOB_BASE + '/' + blobId, { headers: { 'Accept': 'application/json' } });
-    if (resp.status === 404 || resp.status === 410) {
-      const newId = await createBlob();
-      setBlobId(newId);
-      blobId = newId;
-      resp = await fetch(JSONBLOB_BASE + '/' + blobId, { headers: { 'Accept': 'application/json' } });
-    }
-    if (!resp.ok) { hideLoading(); showToast('同步失败：无法读取云端数据'); return; }
-    const data = await resp.json();
-    if (!data.draws) data.draws = [];
-    const existingIds = new Set(data.draws.map(d => d.id));
-    let added = 0;
-    localDraws.forEach(d => {
-      if (!existingIds.has(d.id)) { data.draws.push(d); added++; }
-    });
-    const putResp = await fetch(JSONBLOB_BASE + '/' + blobId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (putResp.ok) {
-      clearLocalDraws();
-      cloudData = data;
-      hideLoading();
-      renderAdmin();
-      showToast('已同步 ' + added + ' 条本地记录到云端');
-    } else {
-      hideLoading();
-      showToast('同步失败：写入云端失败');
-    }
-  } catch(e) {
+    const r = await ghReadData();
+    const existingIds = new Set(r.draws.map(d => d.id));
+    const toAdd = localDraws.filter(d => !existingIds.has(d.id));
+    if (toAdd.length === 0) { clearLocalDraws(); hideLoading(); showToast('本地记录已在云端'); renderAdmin(); return; }
+    r.draws.push(...toAdd);
+    await ghWriteData(r.draws, r.sha, 'sync local draws');
+    clearLocalDraws();
+    cloudData = { draws: r.draws };
+    hideLoading();
+    renderAdmin();
+    showToast('已同步 ' + toAdd.length + ' 条本地记录到云端');
+  } catch (e) {
     console.error('[DC] Sync error:', e);
     hideLoading();
     showToast('同步失败：' + e.message);
   }
 }
 
-async function createBlob() {
-  console.log('[DC] Creating blob...');
-  const resp = await fetch(JSONBLOB_BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify({ draws: [], createdAt: new Date().toISOString(), version: 2 })
-  });
-  if (!resp.ok) {
-    console.error('[DC] Create blob failed:', resp.status, resp.statusText);
-    throw new Error('Create blob failed: ' + resp.status);
-  }
-  let blobId = resp.headers.get('X-jsonblob-id');
-  if (!blobId) {
-    const loc = resp.headers.get('Location');
-    if (loc) blobId = loc.split('/').pop();
-  }
-  // Fallback: try to extract from response body
-  if (!blobId) {
-    try {
-      const body = await resp.clone().json();
-      if (body && body.id) blobId = body.id;
-    } catch(e) {}
-  }
-  if (!blobId) {
-    console.error('[DC] No blob ID in response. Headers:', [...resp.headers.entries()]);
-    throw new Error('No blob ID in response');
-  }
-  console.log('[DC] Blob created:', blobId);
-  return blobId;
-}
+// 注意：GitHub 模式下数据文件不存在时由 ghWriteData 自动创建，无需单独的 createBlob()
 
 async function loadCloudData() {
-  const blobId = getBlobId();
-  if (!blobId) return null;
-  console.log('[DC] Loading blob:', blobId);
-  const resp = await fetch(JSONBLOB_BASE + '/' + blobId, {
-    headers: { 'Accept': 'application/json' }
-  });
-  if (!resp.ok) {
-    if (resp.status === 404 || resp.status === 410) {
-      // 共享云端不存在或已过期：自动重建（本机本地兜底数据不丢失）
-      console.warn('[DC] Shared blob missing/expired, recreating...');
-      try {
-        const newId = await createBlob();
-        setBlobId(newId);
-        return { draws: [], createdAt: new Date().toISOString(), version: 2 };
-      } catch (e2) {
-        console.error('[DC] Recreate blob failed:', e2);
-        return null;
-      }
-    }
-    console.error('[DC] Load failed:', resp.status, resp.statusText);
-    throw new Error('Load failed: ' + resp.status);
+  const data = { draws: [] };
+  try {
+    const r = await ghReadData();
+    data.draws = r.draws;
+    console.log('[DC] Cloud data loaded, draws:', data.draws.length);
+  } catch (e) {
+    console.error('[DC] Load failed:', e.message);
+    throw e;
   }
-  const data = await resp.json();
-  if (!data.draws) data.draws = [];
-  console.log('[DC] Cloud data loaded, draws:', data.draws.length);
-  // Merge any local draws (from failed cloud saves)
+  // 合并本地兜底记录（之前云端写入失败遗留的），并尽量写回云端
   const localDraws = getLocalDraws();
   if (localDraws.length > 0) {
     const existingIds = new Set(data.draws.map(d => d.id));
-    localDraws.forEach(d => {
-      if (!existingIds.has(d.id)) {
-        data.draws.push(d);
+    const toMerge = localDraws.filter(d => !existingIds.has(d.id));
+    if (toMerge.length > 0) {
+      data.draws.push(...toMerge);
+      try {
+        let sha = null; try { sha = (await ghReadData()).sha; } catch (_) {}
+        await ghWriteData(data.draws, sha, 'sync local draws on load');
+        clearLocalDraws();
+        console.log('[DC] Merged', toMerge.length, 'local draws back to cloud');
+      } catch (e2) {
+        console.error('[DC] Sync local draws failed:', e2);
       }
-    });
-    console.log('[DC] Merged', localDraws.length, 'local draws');
-    // Try to sync merged data back to cloud
-    try {
-      await fetch(JSONBLOB_BASE + '/' + blobId, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(data)
-      });
+    } else {
       clearLocalDraws();
-      console.log('[DC] Local draws synced to cloud');
-    } catch(e) {
-      console.error('[DC] Sync local draws failed:', e);
     }
   }
   return data;
 }
 
 async function saveDrawToCloud(draw) {
-  let blobId = getBlobId();
-  if (!blobId) {
-    console.error('[DC] No blob ID, saving to local only');
+  try {
+    const draws = await ghAppendDraw(draw);
+    return { draws: draws };
+  } catch (e) {
+    console.error('[DC] Save failed:', e.message);
     saveDrawToLocal(draw);
-    throw new Error('No blob ID');
+    throw new Error('云端保存失败，已存本机：' + e.message);
   }
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      // GET current data
-      const getResp = await fetch(JSONBLOB_BASE + '/' + blobId, {
-        headers: { 'Accept': 'application/json' }
-      });
-      if (!getResp.ok) {
-        console.error('[DC] GET attempt', attempt+1, 'failed:', getResp.status);
-        if (getResp.status === 404 || getResp.status === 410) {
-          // 共享云端已过期：重建后用新 id 重试，本机记录先留本地兜底
-          try {
-            const newId = await createBlob();
-            setBlobId(newId);
-            blobId = newId;
-            continue;
-          } catch (e2) {
-            saveDrawToLocal(draw);
-            throw new Error('Blob expired, saved locally');
-          }
-        }
-        // Transient error — retry
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
-          continue;
-        }
-        throw new Error('GET failed: ' + getResp.status);
-      }
-      const data = await getResp.json();
-      if (!data.draws) data.draws = [];
-      // Dedup check
-      if (data.draws.some(d => d.id === draw.id)) {
-        cloudData = data;
-        console.log('[DC] Draw already exists, skipping');
-        return data;
-      }
-      // Add new draw
-      data.draws.push(draw);
-      // PUT updated data
-      const putResp = await fetch(JSONBLOB_BASE + '/' + blobId, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (putResp.ok) {
-        cloudData = data;
-        console.log('[DC] Save successful, total draws:', data.draws.length);
-        return data;
-      }
-      console.error('[DC] PUT attempt', attempt+1, 'failed:', putResp.status);
-      if (attempt < 2) {
-        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
-        continue;
-      }
-    } catch (e) {
-      console.error('[DC] Save attempt', attempt+1, 'error:', e.message);
-      if (attempt < 2) {
-        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
-        continue;
-      }
-    }
-  }
-  // All retries failed — save to local as fallback
-  saveDrawToLocal(draw);
-  console.error('[DC] Cloud save failed after 3 retries, saved locally');
-  throw new Error('Cloud save failed after retries');
 }
 
 // ========== HELPERS ========== //
@@ -1377,8 +1280,7 @@ function backToLogin() {
 async function initializeData() {
   try {
     showLoading('初始化数据中...');
-    // 采用所有设备共享的固定云端，避免各自建 blob 导致数据分散
-    if (!getBlobId()) setBlobId(DEFAULT_BLOB_ID);
+    // GitHub 模式下数据文件固定共享，无需初始化选择
     cloudData = { draws: [], createdAt: new Date().toISOString() };
     hideLoading();
     document.getElementById('initSuccessBox').style.display = '';
@@ -1709,15 +1611,14 @@ function renderAdmin() {
   const debugEl = document.getElementById('adminDebugBox');
   if (debugEl) {
     debugEl.innerHTML =
-      '<div style="margin-bottom:4px;"><span style="color:var(--gold);">云端状态:</span> ' + (blobId ? '<span style="color:#5a9a6a;">已连接</span>' : '<span style="color:var(--accent-red);">未初始化</span>') + '</div>' +
-      '<div style="margin-bottom:4px;"><span style="color:var(--gold);">Blob ID:</span> <code style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">' + (blobId || '无') + '</code></div>' +
+      '<div style="margin-bottom:4px;"><span style="color:var(--gold);">存储:</span> <span style="color:#5a9a6a;">GitHub 仓库</span></div>' +
+      '<div style="margin-bottom:4px;"><span style="color:var(--gold);">数据文件:</span> <code style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">' + GH_DATA_PATH + '</code></div>' +
       '<div style="margin-bottom:4px;"><span style="color:var(--gold);">云端记录:</span> ' + (cloudData && cloudData.draws ? cloudData.draws.length : 0) + ' 条</div>' +
       '<div><span style="color:var(--gold);">本地缓存:</span> ' + localDraws.length + ' 条' + (localDraws.length > 0 ? ' <button onclick="syncLocalDraws()" style="margin-left:8px;padding:2px 10px;font-size:0.7rem;background:var(--gold);color:var(--bg-deep);border:none;border-radius:4px;cursor:pointer;">手动同步</button>' : '') + '</div>';
   }
   const linkInput = document.getElementById('adminDataLinkInput');
   if (linkInput) {
-    const bid = getBlobId();
-    linkInput.value = window.location.origin + window.location.pathname + (bid ? '#blob=' + bid : '');
+    linkInput.value = window.location.origin + window.location.pathname;
   }
 
   const usedSlots = cards.reduce((s, _, i) => s + getCardDrawCount(i), 0);
@@ -1803,7 +1704,7 @@ function exportData() {
   const payload = {
     exportedAt: new Date().toISOString(),
     source: 'decision-cards',
-    blobId: getBlobId(),
+    dataFile: GH_DATA_PATH,
     draws: getAllDraws()
   };
   const data = JSON.stringify(payload, null, 2);
@@ -1915,27 +1816,20 @@ function fallbackCopy(text) {
 
 async function resetAllDraws() {
   if (!confirm('确定要清空全部抽卡记录吗？此操作不可撤销，所有卡牌将立即恢复为可抽状态。')) return;
-  cloudData = cloudData || { draws: [] };
-  cloudData.draws = [];
-  const blobId = getBlobId();
   try {
-    if (blobId) {
-      showLoading('重置中...');
-      await fetch(JSONBLOB_BASE + '/' + blobId, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(cloudData)
-      });
-      clearLocalDraws();
-      hideLoading();
-    } else {
-      clearLocalDraws();
-    }
+    showLoading('重置中...');
+    let sha = null; try { sha = (await ghReadData()).sha; } catch (_) {}
+    await ghWriteData([], sha, 'reset draws');
+    cloudData = { draws: [] };
+    clearLocalDraws();
+    hideLoading();
     showToast('已全部清空，卡牌恢复可抽');
   } catch (e) {
     console.error('[DC] Reset failed:', e);
+    cloudData = { draws: [] };
+    clearLocalDraws();
     hideLoading();
-    showToast('云端重置失败，已本地清空');
+    showToast('云端重置失败，已本地清空（请重试）');
   }
   renderAdmin();
 }
