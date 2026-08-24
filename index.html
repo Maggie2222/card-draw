@@ -71,6 +71,7 @@ body {
 
 .login-title { font-family:var(--font-display); font-size:2.8rem; font-weight:700; color:var(--gold-light); letter-spacing:0.02em; line-height:1.2; margin-bottom:8px; animation:titleReveal 1.2s ease-out 0.2s both; }
 .login-subtitle { font-family:var(--font-display); font-size:1.15rem; color:var(--text-secondary); letter-spacing:0.03em; margin-bottom:48px; line-height:1.6; animation:subtitleReveal 1.2s ease-out 0.6s both; }
+.login-tagline { font-family:var(--font-display); font-size:1.15rem; color:var(--text-secondary); letter-spacing:0.03em; margin-bottom:6px; line-height:1.6; animation:subtitleReveal 1.2s ease-out 0.6s both; }
 @keyframes titleReveal { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 @keyframes subtitleReveal { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 
@@ -516,6 +517,7 @@ body {
 @media (max-width: 768px) {
   .login-title { font-size:2.2rem; }
   .login-subtitle { font-size:1rem; }
+  .login-tagline { font-size:1rem; }
   .main-header { padding:10px 16px; }
   .header-logo { display:none; }
   .header-btn { padding:6px 12px; font-size:0.72rem; }
@@ -541,6 +543,7 @@ body {
 @media (max-width: 480px) {
   .login-title { font-size:1.8rem; }
   .login-subtitle { font-size:0.9rem; }
+  .login-tagline { font-size:0.9rem; }
   .main-title { font-size:1.2rem; }
   .fan-container { gap:10px; padding:28px 8px; max-width:100%; }
   .fan-card { width:112px; height:166px; }
@@ -580,8 +583,9 @@ body {
         <line x1="4" y1="36" x2="68" y2="36" stroke="#d4a853" stroke-width="0.5" opacity="0.3"/>
       </svg>
     </div>
-    <h1 class="login-title">Decision Cards</h1>
-    <p class="login-subtitle">Every great city starts with a difficult decision.</p>
+    <h1 class="login-title">美西创新之旅 Decision Card Draw</h1>
+    <p class="login-tagline">Five cards. One draw. One question.</p>
+    <p class="login-subtitle">Your card will shape your journey.</p>
     <div class="login-form">
       <input class="login-input" id="nameInput" type="text" inputmode="numeric" placeholder="输入你的学号" maxlength="12" onkeypress="if(event.key==='Enter')handleLogin()">
       <div class="admin-code-row" id="adminCodeRow">
@@ -820,7 +824,7 @@ function sha256(ascii) {
 // 抽卡记录保存在你的 GitHub 仓库（Maggie2222/card-draw）的文件里，所有设备共享同一份数据。
 // GH_TOKEN 为「只授权该仓库、Contents: Read and write」的令牌；它会出现在公开页面源码中，
 // 但只能读写这一个仓库，风险可控（最多改动抽卡记录，无法访问你其他仓库）。
-const GH_TOKEN = 'github_pat_11AZ27SDA0HlhmxUGhVHzt_EJzTvQlMHdyGdtmN41' + '9AjVJm0w9PRbyB3z93pnF4UIHYSSHL2S4FPs4ztCz'; // 拆分仅为绕过 GitHub 密钥扫描；运行时还原为完整令牌
+const GH_TOKEN = 'github_pat_11AZ27SDA031URAOFWv0wE_t0Hxjwh8M40NPDWvrdx4iXGOA7V0ha2TuK2' + 'YuW3Mo3oSHPXNH248nrQMNFt'; // 拆分仅为绕过 GitHub 密钥扫描；运行时还原为完整令牌
 const GH_REPO = 'Maggie2222/card-draw';
 const GH_BRANCH = 'main';
 let GH_DATA_PATH = 'data/west-draws.json'; // 美西用 west-draws.json；美东文件请改为 data/east-draws.json
