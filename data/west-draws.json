@@ -1,1 +1,1 @@
-{"draws": [], "createdAt": "", "version": 2}
+{"draws": [{"id": "fg-1", "userName": "99999", "organization": "美西", "identity": "测试", "cardIndex": 0, "selectedOption": "A", "reason": "链路验证", "dateStr": "2026-08-24", "timestamp": 1}], "createdAt": "", "version": 2}
