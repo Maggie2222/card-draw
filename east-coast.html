@@ -288,6 +288,12 @@ body {
 .identity-banner-name[data-color="gold"] { color:var(--gold-light); }
 .identity-banner-name[data-color="green"] { color:#8ac8a0; }
 .identity-banner-desc { font-size:0.85rem; color:var(--text-secondary); line-height:1.5; }
+.identity-banner-dimension {
+  display:inline-block; margin-top:12px; padding:5px 16px;
+  border-radius:999px; font-family:var(--font-mono); font-size:0.8rem;
+  letter-spacing:1px; color:var(--gold-light);
+  border:1px solid rgba(212,168,83,0.45); background:rgba(212,168,83,0.10);
+}
 
 .reveal-front-card {
   width:100%; max-width:480px; margin:0 auto 24px; background:var(--bg-card);
@@ -679,6 +685,7 @@ body {
     <div class="identity-banner reflection-identity-banner" id="reflectionBanner" data-color="red">
       <div class="reveal-label-dramatic">身份揭晓 · IDENTITY REVEALED</div>
       <div class="identity-banner-name" id="reflectionIdentityName" data-color="red">企业领导者</div>
+      <div class="identity-banner-dimension" id="reflectionIdentityDimension"></div>
       <div class="identity-banner-desc" id="reflectionIdentityDesc"></div>
     </div>
     <h2 class="reflection-title" id="reflectionTitle">你的选择</h2>
@@ -700,6 +707,7 @@ body {
     <div class="identity-banner reflection-identity-banner" id="resultBanner" data-color="red">
       <div class="reveal-label-dramatic">身份已确定 · YOUR GROUP</div>
       <div class="identity-banner-name" id="resultIdentityName" data-color="red"></div>
+      <div class="identity-banner-dimension" id="resultIdentityDimension"></div>
       <div class="identity-banner-desc" id="resultIdentityDesc"></div>
     </div>
     <h2 class="reflection-title" id="resultTitle"></h2>
@@ -845,6 +853,7 @@ const cards = [
     identity: '首席创新官',
     identityEn: 'Chief Innovation Officer',
     identityDesc: '你在前沿探索与商业兑现之间做取舍，决定技术能否走出实验室',
+    dimension: '维度 1 · Knowledge',
     accent: '#C9A84C',
     colorName: 'gold',
     scenario: '你执掌一家前沿研究院，团队刚刚突破一项可能改变行业的技术，但距离真正赚钱还有数年。董事会两派对立：一派主张继续砸钱追求下一次突破，一派要求立刻寻找商业落地点。你的判断是：',
@@ -863,6 +872,7 @@ const cards = [
     identity: '策略分析师',
     identityEn: 'Strategy Analyst',
     identityDesc: '你在数据、模型与直觉之间权衡，为重大决策提供前瞻判断',
+    dimension: '维度 2 · Decision',
     accent: '#C0453C',
     colorName: 'red',
     scenario: '公司要在三年后进入一个全新市场，董事会希望你能「预测」胜负。你手上有历史数据、宏观模型和同行案例，但每一次危机都证明模型会失灵。你会：',
@@ -881,6 +891,7 @@ const cards = [
     identity: '组织转型顾问',
     identityEn: 'Transformation Consultant',
     identityDesc: '你在传承与变革之间诊断组织，决定百年基业能否重生',
+    dimension: '维度 3 · Institution',
     accent: '#4a7fb5',
     colorName: 'blue',
     scenario: '你受邀为一家拥有 300 年历史的机构把脉。它的招牌与信任无可替代，但流程僵化、人才老化，新对手正用技术改写规则。你建议：',
@@ -899,6 +910,7 @@ const cards = [
     identity: 'CEO 候选人',
     identityEn: 'CEO Candidate',
     identityDesc: '你在专业深度与全局整合之间立旗，定义一家公司的方向',
+    dimension: '维度 4 · Leadership',
     accent: '#5a9a6a',
     colorName: 'green',
     scenario: '董事会正在权衡下一任 CEO：一位是领域顶尖专家，另一位是能调动技术、资本与人才的整合者。你作为候选人被问及——你更倾向成为哪一种？',
@@ -917,6 +929,7 @@ const cards = [
     identity: '风险投资合伙人',
     identityEn: 'VC Partner',
     identityDesc: '你在确定性与潜力之间下注，押注谁能穿越不确定性',
+    dimension: '维度 5 · Capital',
     accent: '#7a5aaa',
     colorName: 'purple',
     scenario: '你面前两份投资提案：一份是现金流稳健、今年就盈利的成熟公司；一份是仍在亏损但可能重塑行业的颠覆者。你的钱会投向：',
@@ -1210,6 +1223,7 @@ function renderResult() {
   document.getElementById('resultIdentityName').textContent = card.identity;
   document.getElementById('resultIdentityName').dataset.color = card.colorName;
   document.getElementById('resultIdentityDesc').textContent = card.identityDesc;
+  document.getElementById('resultIdentityDimension').textContent = card.dimension;
   document.getElementById('resultTitle').textContent = card.organization;
   document.getElementById('resultQuestion').textContent = card.question;
   document.getElementById('resultChoice').textContent = '你选择了：' + first.selectedOption;
@@ -1546,6 +1560,7 @@ function setupReflection() {
   document.getElementById('reflectionIdentityName').textContent = card.identity;
   document.getElementById('reflectionIdentityName').dataset.color = card.colorName;
   document.getElementById('reflectionIdentityDesc').textContent = card.identityDesc;
+  document.getElementById('reflectionIdentityDimension').textContent = card.dimension;
 
   document.getElementById('reflectionTitle').textContent = card.organization;
   document.getElementById('reflectionQuestion').textContent = card.question;
