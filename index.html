@@ -281,19 +281,21 @@ body {
 .identity-banner[data-color="green"] { border-color:rgba(90,154,106,0.4); background:rgba(90,154,106,0.08); }
 
 .identity-banner-label { font-family:var(--font-mono); font-size:0.7rem; letter-spacing:2px; color:var(--gold-dim); margin-bottom:6px; }
-.identity-banner-name { font-family:var(--font-display); font-size:1.8rem; font-weight:700; margin-bottom:4px; }
+.identity-banner-heading {
+  display:flex; align-items:baseline; justify-content:center;
+  gap:10px; flex-wrap:wrap; margin-bottom:8px;
+}
+.identity-banner-name { font-family:var(--font-display); font-size:1.8rem; font-weight:700; }
 .identity-banner-name[data-color="red"] { color:#e06960; }
 .identity-banner-name[data-color="blue"] { color:#7ab5d8; }
 .identity-banner-name[data-color="purple"] { color:#a08ada; }
 .identity-banner-name[data-color="gold"] { color:var(--gold-light); }
 .identity-banner-name[data-color="green"] { color:#8ac8a0; }
-.identity-banner-desc { font-size:0.85rem; color:var(--text-secondary); line-height:1.5; }
 .identity-banner-dimension {
-  display:inline-block; margin-top:12px; padding:5px 16px;
-  border-radius:999px; font-family:var(--font-mono); font-size:0.8rem;
-  letter-spacing:1px; color:var(--gold-light);
-  border:1px solid rgba(212,168,83,0.45); background:rgba(212,168,83,0.10);
+  font-family:var(--font-display); font-size:1.8rem; font-weight:400;
+  color:var(--gold-light); opacity:0.92;
 }
+.identity-banner-desc { font-size:0.9rem; color:var(--text-secondary); line-height:1.6; margin-top:6px; }
 
 .reveal-front-card {
   width:100%; max-width:480px; margin:0 auto 24px; background:var(--bg-card);
@@ -684,8 +686,10 @@ body {
   <div class="reflection-content">
     <div class="identity-banner reflection-identity-banner" id="reflectionBanner" data-color="red">
       <div class="reveal-label-dramatic">身份揭晓 · IDENTITY REVEALED</div>
-      <div class="identity-banner-name" id="reflectionIdentityName" data-color="red">企业领导者</div>
-      <div class="identity-banner-dimension" id="reflectionIdentityDimension"></div>
+      <div class="identity-banner-heading">
+        <span class="identity-banner-name" id="reflectionIdentityName" data-color="red">企业领导者</span>
+        <span class="identity-banner-dimension" id="reflectionIdentityDimension"></span>
+      </div>
       <div class="identity-banner-desc" id="reflectionIdentityDesc"></div>
     </div>
     <h2 class="reflection-title" id="reflectionTitle">你的选择</h2>
@@ -706,8 +710,10 @@ body {
   <div class="reflection-content">
     <div class="identity-banner reflection-identity-banner" id="resultBanner" data-color="red">
       <div class="reveal-label-dramatic">身份已确定 · YOUR GROUP</div>
-      <div class="identity-banner-name" id="resultIdentityName" data-color="red"></div>
-      <div class="identity-banner-dimension" id="resultIdentityDimension"></div>
+      <div class="identity-banner-heading">
+        <span class="identity-banner-name" id="resultIdentityName" data-color="red"></span>
+        <span class="identity-banner-dimension" id="resultIdentityDimension"></span>
+      </div>
       <div class="identity-banner-desc" id="resultIdentityDesc"></div>
     </div>
     <h2 class="reflection-title" id="resultTitle"></h2>
@@ -1224,7 +1230,7 @@ function renderResult() {
   document.getElementById('resultIdentityName').textContent = card.identity;
   document.getElementById('resultIdentityName').dataset.color = card.colorName;
   document.getElementById('resultIdentityDesc').textContent = card.identityDesc;
-  document.getElementById('resultIdentityDimension').textContent = card.dimension;
+  document.getElementById('resultIdentityDimension').textContent = '（' + card.dimension + '）';
   document.getElementById('resultTitle').textContent = card.organization;
   document.getElementById('resultQuestion').textContent = card.question;
   document.getElementById('resultChoice').textContent = '你选择了：' + first.selectedOption;
@@ -1568,7 +1574,7 @@ function setupReflection() {
   document.getElementById('reflectionIdentityName').textContent = card.identity;
   document.getElementById('reflectionIdentityName').dataset.color = card.colorName;
   document.getElementById('reflectionIdentityDesc').textContent = card.identityDesc;
-  document.getElementById('reflectionIdentityDimension').textContent = card.dimension;
+  document.getElementById('reflectionIdentityDimension').textContent = '（' + card.dimension + '）';
 
   document.getElementById('reflectionTitle').textContent = card.organization;
   document.getElementById('reflectionQuestion').textContent = card.question;
