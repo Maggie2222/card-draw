@@ -288,6 +288,12 @@ body {
 .identity-banner-name[data-color="gold"] { color:var(--gold-light); }
 .identity-banner-name[data-color="green"] { color:#8ac8a0; }
 .identity-banner-desc { font-size:0.85rem; color:var(--text-secondary); line-height:1.5; }
+.identity-banner-dimension {
+  display:inline-block; margin-top:12px; padding:5px 16px;
+  border-radius:999px; font-family:var(--font-mono); font-size:0.8rem;
+  letter-spacing:1px; color:var(--gold-light);
+  border:1px solid rgba(212,168,83,0.45); background:rgba(212,168,83,0.10);
+}
 
 .reveal-front-card {
   width:100%; max-width:480px; margin:0 auto 24px; background:var(--bg-card);
@@ -679,6 +685,7 @@ body {
     <div class="identity-banner reflection-identity-banner" id="reflectionBanner" data-color="red">
       <div class="reveal-label-dramatic">身份揭晓 · IDENTITY REVEALED</div>
       <div class="identity-banner-name" id="reflectionIdentityName" data-color="red">企业领导者</div>
+      <div class="identity-banner-dimension" id="reflectionIdentityDimension"></div>
       <div class="identity-banner-desc" id="reflectionIdentityDesc"></div>
     </div>
     <h2 class="reflection-title" id="reflectionTitle">你的选择</h2>
@@ -700,6 +707,7 @@ body {
     <div class="identity-banner reflection-identity-banner" id="resultBanner" data-color="red">
       <div class="reveal-label-dramatic">身份已确定 · YOUR GROUP</div>
       <div class="identity-banner-name" id="resultIdentityName" data-color="red"></div>
+      <div class="identity-banner-dimension" id="resultIdentityDimension"></div>
       <div class="identity-banner-desc" id="resultIdentityDesc"></div>
     </div>
     <h2 class="reflection-title" id="resultTitle"></h2>
@@ -845,6 +853,7 @@ const cards = [
     identity: '企业领导者',
     identityEn: 'Enterprise Leader',
     identityDesc: '你在创新与利润之间做出抉择，承担企业方向的责任',
+    dimension: '维度 3 · Business Model',
     accent: '#c4453a',
     colorName: 'red',
     scenario: 'Google 每年都会投入大量资源研发很多最后失败的项目（<span class="highlight">Google Glass</span>、<span class="highlight">Google+</span>、<span class="highlight">Stadia</span> 等）。很多项目烧掉了数亿美元。如果你是 CEO，董事会要求：未来三年利润提升 20%。你会怎么做？',
@@ -863,6 +872,7 @@ const cards = [
     identity: '学术探索者',
     identityEn: 'Academic Explorer',
     identityDesc: '你在精英卓越与普惠教育之间寻找平衡，探索知识的边界',
+    dimension: '维度 5 · Talent&Education',
     accent: '#4a7fb5',
     colorName: 'blue',
     scenario: '伯克利既要追求世界级科研又承担公共教育责任。资源有限。如果只能选一个，你会优先：',
@@ -882,6 +892,7 @@ const cards = [
     identity: '创业投资者',
     identityEn: 'Entrepreneur Investor',
     identityDesc: '你在人才与资本之间分配杠杆，决定创新的燃料来源',
+    dimension: '维度 4 · Innovation Culture',
     accent: '#7a5aaa',
     colorName: 'purple',
     scenario: '假设你有 100 亿美元，只能投资一个。\n十年以后，哪个更容易产生 Google？为什么？',
@@ -899,6 +910,7 @@ const cards = [
     identity: '内容创造者',
     identityEn: 'Content Creator',
     identityDesc: '你在算法数据与人文创意之间做出选择，定义文化生产的未来',
+    dimension: '维度 2 · Creative Economy',
     accent: '#d4a853',
     colorName: 'gold',
     scenario: 'Netflix、Disney、TikTok、AI——越来越依赖数据。如果你经营一家影视公司，你会：',
@@ -917,6 +929,7 @@ const cards = [
     identity: '未来城市设计师',
     identityEn: 'Future City Designer',
     identityDesc: '你构建创新城市的底层架构，决定人才、资本与文化的交汇方式',
+    dimension: '维度 1 · Innovation Ecosystem',
     accent: '#5a9a6a',
     colorName: 'green',
     scenario: '如果你负责打造下一座世界创新城市，只能选两件，你选什么？',
@@ -1211,6 +1224,7 @@ function renderResult() {
   document.getElementById('resultIdentityName').textContent = card.identity;
   document.getElementById('resultIdentityName').dataset.color = card.colorName;
   document.getElementById('resultIdentityDesc').textContent = card.identityDesc;
+  document.getElementById('resultIdentityDimension').textContent = card.dimension;
   document.getElementById('resultTitle').textContent = card.organization;
   document.getElementById('resultQuestion').textContent = card.question;
   document.getElementById('resultChoice').textContent = '你选择了：' + first.selectedOption;
@@ -1554,6 +1568,7 @@ function setupReflection() {
   document.getElementById('reflectionIdentityName').textContent = card.identity;
   document.getElementById('reflectionIdentityName').dataset.color = card.colorName;
   document.getElementById('reflectionIdentityDesc').textContent = card.identityDesc;
+  document.getElementById('reflectionIdentityDimension').textContent = card.dimension;
 
   document.getElementById('reflectionTitle').textContent = card.organization;
   document.getElementById('reflectionQuestion').textContent = card.question;
