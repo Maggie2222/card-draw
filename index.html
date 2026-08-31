@@ -843,7 +843,7 @@ const GH_REPO = 'Maggie2222/card-draw';
 const GH_BRANCH = 'main';
 let GH_DATA_PATH = 'data/west-draws.json'; // 美西用 west-draws.json；美东文件请改为 data/east-draws.json
 const GH_API = 'https://api.github.com/repos/' + GH_REPO + '/contents/';
-const MAX_DRAWS = 8;
+const MAX_DRAWS = 7;
 const LS_BLOB = 'dc_blob_id';
 const LS_USER = 'dc_user_name';
 const LS_ADMIN = 'dc_is_admin';
@@ -1113,13 +1113,13 @@ function allDrawsMerged() {
   local.forEach(d => { if (d && d.id && !seen.has(d.id) && allowed.has(d.userName)) { seen.add(d.id); merged.push(d); } });
   return merged;
 }
-// 每个问题最多被 10 个不同用户抽取（全局上限）
+// 每个问题（每组）最多被 7 个不同用户抽取（每组上限）
 function getCardDrawCount(cardIndex) {
   const users = new Set();
   allDrawsMerged().forEach(d => { if (d.cardIndex === cardIndex) users.add(d.userName); });
   return users.size;
 }
-function isCaseFull(cardIndex) {  // 该问题已被 10 个不同用户抽取
+function isCaseFull(cardIndex) {  // 该问题（组）已被 7 个不同用户抽取
   return getCardDrawCount(cardIndex) >= MAX_DRAWS;
 }
 // 当前登录用户是否已抽过该问题
@@ -1132,7 +1132,7 @@ function getUserDrawnCount() {
   allDrawsMerged().forEach(d => { if (d.userName === currentUser) s.add(d.cardIndex); });
   return s.size;
 }
-// 当前用户还可抽的问题：未抽过 且 该问题未满 8 人（机会均等）
+// 当前用户还可抽的问题：未抽过 且 该问题未满 7 人（机会均等）
 function getAvailableCasesForUser() {
   const avail = [];
   cards.forEach((_, i) => {
@@ -1407,7 +1407,7 @@ function drawFromCard(clickedIndex) {
 }
 
 function drawRandomCard() {
-  // 从"当前用户未抽过 且 该问题未满 8 人"的卡中随机抽一张（机会均等）
+  // 从"当前用户未抽过 且 该问题未满 7 人"的卡中随机抽一张（机会均等）
   const available = getAvailableCasesForUser();
 
   if (available.length === 0) {
