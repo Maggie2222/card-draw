@@ -996,11 +996,20 @@ async function ghAppendDraw(draw) {
     try {
       const r = await ghReadData();
       if (r.draws.some(d => d.id === draw.id)) { cloudData = { draws: r.draws }; return r.draws; }
+      // 落库前用服务端最新数据复核该组名额，杜绝旧标签页缓存 / 并发导致的超员
+      // （点击时的 isCaseFull 只基于客户端快照，此处以服务端真相为准，超限则确定性拒绝）
+      const cnt = new Set(r.draws.filter(d => d.cardIndex === draw.cardIndex).map(d => d.userName)).size;
+      if (cnt >= MAX_DRAWS) {
+        const err = new Error('该组名额已满');
+        err.full = true; err.status = 409;
+        throw err;
+      }
       r.draws.push(draw);
       await ghWriteData(r.draws, r.sha, 'add draw ' + (draw.userName || ''));
       cloudData = { draws: r.draws };
       return r.draws;
     } catch (e) {
+      if (e && e.full) throw e;   // 名额已满是确定性拒绝，不重试
       if ((e.status === 409 || e.status === 422) && attempt < 5) { await new Promise(res => setTimeout(res, 300 * (attempt + 1))); continue; }
       throw e;
     }
@@ -1545,6 +1554,16 @@ async function submitChoice() {
     setupReflection();
     showScreen('reflectionScreen');
   } catch (e) {
+    if (e && e.full) {
+      // 落库瞬间服务端判定该组已满（旧标签页缓存 / 并发导致），确定性拒绝：不落库、不展示身份，退回主界面另选
+      console.warn('[DC] Group full, reject draw:', e.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = '完成选择';
+      showToast('该组名额刚刚抽满，请返回重新抽取');
+      try { const rf = await ghReadData(); cloudData = { draws: rf.draws }; } catch (_) {}
+      showMain();
+      return;
+    }
     console.error('[DC] Save error:', e.message);
     submitBtn.disabled = false;
     submitBtn.textContent = '完成选择';
